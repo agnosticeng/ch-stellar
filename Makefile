@@ -20,7 +20,6 @@ bundle:
 	mkdir -p $(BUNDLE_DIR)/var/lib/clickhouse/metadata
 	cp $(BINARY_PATH) $(BUNDLE_DIR)/var/lib/clickhouse/user_scripts/
 	cp config/*_function.*ml $(BUNDLE_DIR)/etc/clickhouse-server/
-	cp sql/function_*.sql $(BUNDLE_DIR)/var/lib/clickhouse/user_defined/
 	COPYFILE_DISABLE=1 tar --no-xattr -cvzf $(BUNDLE_ARCHIVE) -C $(BUNDLE_DIR) .
 
 clean:
