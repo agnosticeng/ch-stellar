@@ -1,5 +1,5 @@
 BUNDLE_DIR ?= "tmp/bundle"
-BUNDLE_ARCHIVE ?= "/tmp/bundle.tar.gz"
+BUNDLE_ARCHIVE ?= "bundle.tar.gz"
 RELEASE ?= "false"
 BINARY_PATH ?= "./target/debug/ch-stellar"
 
@@ -12,7 +12,7 @@ build:
 	cargo clippy
 	cargo build ${CARGO_BUILD_OPTIONS}
 
-bundle:
+bundle: 
 	mkdir -p $(BUNDLE_DIR)
 	mkdir -p $(BUNDLE_DIR)/etc/clickhouse-server
 	mkdir -p $(BUNDLE_DIR)/var/lib/clickhouse/user_defined
@@ -20,6 +20,7 @@ bundle:
 	mkdir -p $(BUNDLE_DIR)/var/lib/clickhouse/metadata
 	cp $(BINARY_PATH) $(BUNDLE_DIR)/var/lib/clickhouse/user_scripts/
 	cp config/*_function.*ml $(BUNDLE_DIR)/etc/clickhouse-server/
+	cp sql/function_*.sql $(BUNDLE_DIR)/var/lib/clickhouse/user_defined/
 	COPYFILE_DISABLE=1 tar --no-xattr -cvzf $(BUNDLE_ARCHIVE) -C $(BUNDLE_DIR) .
 
 clean:
