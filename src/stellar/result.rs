@@ -11,6 +11,12 @@ pub enum StellarError {
     IO(#[from] std::io::Error),
     #[error("URL parsing error")]
     URLParse(#[from] url::ParseError),
+    #[error("XDR error")]
+    XDRError(#[from] stellar_xdr::next::Error),
     #[error("wrong XDR type")]
-    WrongXDRType
+    WrongXDRType,
+    #[error("empty Galexie datalake")]
+    EmptyGalexieDataLake,
+    #[error("empty network passphrase")]
+    EmptyNetworkPassphrase,
 }

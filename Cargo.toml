@@ -1,7 +1,15 @@
 [package]
-name = "ch-stellar"
+name = "ch_stellar"
 version = "0.0.1"
 edition = "2024"
+
+[lib]
+name = "ch_stellar"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ch-stellar"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.98"
@@ -32,9 +40,12 @@ serde-transcode = "1.1.1"
 toml = "0.8.23"
 mimalloc = "0.1.47"
 bytes = "1.10.1"
-stellar-xdr = { version = "23.0.0", features = ["base64", "hex", "next", "serde", "serde_json"] }
+stellar-xdr = { version = "23.0.0", features = ["base64", "hex", "next", "serde", "serde_json", "std"] }
 zstd = "0.13.3"
 stream-flatten-iters = "0.2.0"
 querystring = "1.1.0"
 alloy = "1.0.30"
 alloy-json-rpc = "1.0.30"
+sha256 = "1.6.0"
+sha2 = "0.10.9"
+hex = "0.4.3"

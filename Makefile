@@ -1,5 +1,5 @@
 BUNDLE_DIR ?= "tmp/bundle"
-BUNDLE_ARCHIVE ?= "bundle.tar.gz"
+BUNDLE_ARCHIVE ?= "tmp/bundle.tar.gz"
 RELEASE ?= "false"
 BINARY_PATH ?= "./target/debug/ch-stellar"
 

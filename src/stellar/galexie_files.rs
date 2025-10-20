@@ -25,7 +25,7 @@ impl GalexieFiles {
         }
     }
 
-    fn file_for_ledger(&self, ledger: u32) -> String {
+    pub fn file_for_ledger(&self, ledger: u32) -> String {
         let ledgers_per_partition = self.ledgers_per_file * self.files_per_partition;
         let partition_start = (ledger / ledgers_per_partition) * ledgers_per_partition;
         let partition_end = partition_start + ledgers_per_partition - 1;

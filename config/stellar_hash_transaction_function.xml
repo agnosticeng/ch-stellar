@@ -1,0 +1,25 @@
+<functions>
+    <function>
+        <name>stellar_hash_transaction</name>
+        <type>executable_pool</type>
+        <format>ArrowStream</format>
+        <stderr_reaction>log</stderr_reaction>
+        <command>ch-stellar function stellar-hash-transaction</command>
+
+        <pool_size>16</pool_size>
+        <max_command_execution_time>300</max_command_execution_time>
+        <command_read_timeout>180000</command_read_timeout>
+        <command_write_timeout>60000</command_write_timeout>
+
+        <argument>
+            <name>data</name>
+            <type>String</type>
+        </argument>
+        <argument>
+            <name>passphrase</name>
+            <type>String</type>
+        </argument>
+
+        <return_type>String</return_type>
+    </function>
+</functions>

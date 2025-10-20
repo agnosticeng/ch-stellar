@@ -1,7 +1,6 @@
 use crate::arrow_ext::RecordBatchExt;
-use crate::json_result::JSONResult;
-use crate::json_rpc::{JSONRPCCall, JSONRpcClient};
-use anyhow::{Context, Result, anyhow, bail};
+use crate::stellar::hash_transaction_envelope;
+use anyhow::{Context, Result};
 use arrow::array::{BinaryArray, GenericByteBuilder, RecordBatch};
 use arrow::datatypes::{BinaryType, DataType, Field, Schema};
 use arrow_ipc::reader::StreamReader;
@@ -11,11 +10,12 @@ use core::str;
 use itertools::izip;
 use std::io::{stdin, stdout};
 use std::sync::Arc;
+use stellar_xdr::next::TransactionEnvelope;
 
 #[derive(Debug, Clone, Args)]
-pub struct StellarRpcCommand {}
+pub struct StellarHashTransactionCommand {}
 
-impl StellarRpcCommand {
+impl StellarHashTransactionCommand {
     pub async fn run(&self) -> Result<()> {
         let output_schema = Arc::new(Schema::new(vec![Field::new(
             "result",
@@ -35,32 +35,21 @@ impl StellarRpcCommand {
                     input_batch.num_rows() * 1024,
                 );
 
-                let method_col: &BinaryArray = input_batch.get_column("method")?;
-                let endpoint_col: &BinaryArray = input_batch.get_column("endpoint")?;
-                let params_col: &BinaryArray = input_batch.get_column("params")?;
+                let data_col: &BinaryArray = input_batch.get_column("data")?;
+                let passphrase_col: &BinaryArray = input_batch.get_column("passphrase")?;
 
-                if !endpoint_col
-                    .iter()
-                    .all(|x| x.is_some() && x.unwrap() == endpoint_col.value(0))
-                {
-                    bail!("endpoint must be constant for an input block");
-                }
-
-                let client = JSONRpcClient::new(str::from_utf8(endpoint_col.value(0))?)?;
-                let mut calls = Vec::new();
-
-                for (method, params) in izip!(method_col, params_col) {
-                    calls.push(JSONRPCCall {
-                        method: str::from_utf8(method.ok_or(anyhow!("method is not valid utf8"))?)?
-                            .to_string(),
-                        params: serde_json::from_slice::<serde_json::Value>(params.unwrap())
-                            .context("failed to decode params")?,
+                let it =
+                    izip!(data_col, passphrase_col).map(|(data, passphrase)| -> Result<String> {
+                        let envelope: TransactionEnvelope = serde_json::from_slice(data.unwrap())?;
+                        let hash = hash_transaction_envelope(
+                            envelope,
+                            str::from_utf8(passphrase.unwrap())?,
+                        )?;
+                        Ok(hex::encode(hash))
                     });
-                }
 
-                for res in client.calls(calls).await?.into_iter() {
-                    result_col_builder
-                        .append_value(serde_json::to_string(&JSONResult::from(res))?.as_bytes());
+                for v in it {
+                    result_col_builder.append_value(v?);
                 }
 
                 let result_col = result_col_builder.finish();

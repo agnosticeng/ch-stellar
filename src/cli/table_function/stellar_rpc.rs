@@ -1,24 +1,28 @@
-use core::str;
-use std::io::{stdin,stdout};
-use std::sync::Arc;
+use crate::arrow_ext::RecordBatchExt;
+use crate::json_result::JSONResult;
+use crate::json_rpc::{JSONRPCCall, JSONRpcClient};
 use anyhow::{Context, Result};
-use clap::Args;
-use itertools::izip;
-use arrow::datatypes::{Schema,DataType,Field,BinaryType};
-use arrow::array::{BinaryArray,GenericByteBuilder,RecordBatch};
+use arrow::array::{BinaryArray, GenericByteBuilder, RecordBatch};
+use arrow::datatypes::{BinaryType, DataType, Field, Schema};
 use arrow_ipc::reader::StreamReader;
 use arrow_ipc::writer::StreamWriter;
+use clap::Args;
+use core::str;
+use itertools::izip;
 use serde_json::json;
-use crate::json_rpc::{JSONRpcClient,JSONRPCCall};
-use crate::json_result::JSONResult;
-use crate::arrow_ext::RecordBatchExt;
+use std::io::{stdin, stdout};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Args)]
 pub struct StellarRpcCommand {}
 
 impl StellarRpcCommand {
     pub async fn run(&self) -> Result<()> {
-        let output_schema = Arc::new(Schema::new(vec![Field::new("result", DataType::Binary, false)]));
+        let output_schema = Arc::new(Schema::new(vec![Field::new(
+            "result",
+            DataType::Binary,
+            false,
+        )]));
         let reader = StreamReader::try_new_buffered(stdin(), None)?;
         let mut writer = StreamWriter::try_new_buffered(stdout(), &output_schema)?;
 
@@ -27,7 +31,7 @@ impl StellarRpcCommand {
 
             let endpoint_col: &BinaryArray = input_batch.get_column("endpoint")?;
             let method_col: &BinaryArray = input_batch.get_column("method")?;
-            let params_col: &BinaryArray = input_batch.get_column("params")?; 
+            let params_col: &BinaryArray = input_batch.get_column("params")?;
 
             for (endpoint, method, params) in izip!(endpoint_col, method_col, params_col) {
                 let mut curr = None;
@@ -38,27 +42,35 @@ impl StellarRpcCommand {
 
                     if let Some(v) = curr {
                         if let Some(m) = params.as_object_mut() {
-                            m.insert("pagination".to_string(), json!({
-                                "cursor": v
-                            }));
+                            m.insert(
+                                "pagination".to_string(),
+                                json!({
+                                    "cursor": v
+                                }),
+                            );
                             m.remove("startLedger");
                             m.remove("endLedger");
                         }
                     }
 
-                    let mut res = client.calls([
-                        JSONRPCCall{
+                    let mut res = client
+                        .calls([JSONRPCCall {
                             method: str::from_utf8(method.unwrap())?.to_string(),
-                            params
-                        }
-                    ]).await?;
+                            params,
+                        }])
+                        .await?;
 
                     let res = JSONResult::from(res.remove(0));
-                    let mut result_col_builder: GenericByteBuilder<arrow::datatypes::GenericBinaryType<i32>> = GenericByteBuilder::<BinaryType>::new();
+                    let mut result_col_builder: GenericByteBuilder<
+                        arrow::datatypes::GenericBinaryType<i32>,
+                    > = GenericByteBuilder::<BinaryType>::new();
                     result_col_builder.append_value(serde_json::to_string(&res)?.as_bytes());
                     let result_col = result_col_builder.finish();
-                    let output_batch = RecordBatch::try_new(output_schema.clone(), vec![Arc::new(result_col)])?;
-                    writer.write(&output_batch).context("failed to write output batch")?;
+                    let output_batch =
+                        RecordBatch::try_new(output_schema.clone(), vec![Arc::new(result_col)])?;
+                    writer
+                        .write(&output_batch)
+                        .context("failed to write output batch")?;
                     writer.flush().context("failed to flush output stream")?;
 
                     let res = Into::<Result<serde_json::Value>>::into(res);
@@ -73,7 +85,7 @@ impl StellarRpcCommand {
 
                     match cursor {
                         None => break,
-                        Some(v) => curr = Some(v.to_string())
+                        Some(v) => curr = Some(v.to_string()),
                     }
                 }
             }
