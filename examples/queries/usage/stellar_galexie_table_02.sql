@@ -1,5 +1,6 @@
 select
-    ledger_close_meta.v0.ledger_header.header.ledger_seq
+    ledger_close_meta.v0.ledger_header.header.ledger_seq as sequence,
+    ledger_close_meta.v0.ledger_header.header.scp_value.close_time as close_time
 from executable(
     'ch-stellar table-function stellar-galexie',
     ArrowStream,
