@@ -13,32 +13,37 @@ from executable(
             (
                 'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
                 33028304,
-                33028304
+                33028314
             ),
             (
                 'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
                 34000000,
-                34000002
+                34000010
             ),
             (
                 'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
                 54000000,
-                54000002
+                54000010
             ),
             (
                 'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
                 50461314,
-                50461314
+                50461324
             ),
             (
                 'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
                 50461745,
-                50461745
+                50461755
             ),
             (
                 'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
                 50560940,
-                50560940
+                50560950
+            ),
+            (
+                'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
+                58000000,
+                58000010   
             )
         )
     ),

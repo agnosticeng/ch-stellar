@@ -35,8 +35,13 @@ with
                 ledger_close_meta.v0.tx_processing[],
                 ledger_close_meta.v1.tx_processing[],
                 ledger_close_meta.v2.tx_processing[]
-            ) as tx_metas
+            ) as tx_metas,
 
+            arrayConcat(
+                ledger_close_meta.v0.upgrades_processing[].changes[],
+                ledger_close_meta.v1.upgrades_processing[].changes[],
+                ledger_close_meta.v2.upgrades_processing[].changes[]
+            ) as upgrade_changes
         from galexie
     ),
 
@@ -47,7 +52,7 @@ with
         from ledgers 
         array join 
             tx_envelopes as tx_envelope
-        ),
+    ),
 
     tx_metas as (
         select 
@@ -78,7 +83,14 @@ with
             arrayConcat(
                 tx_envelope.tx.tx.operations[],
                 tx_envelope.tx_fee_bump.tx.inner_tx.tx.tx.operations[]
-            ) as ops,
+            )::Array(JSON) as ops,
+
+            arrayConcat(
+                tx_meta.result.result.result.tx_success[],
+                tx_meta.result.result.result.tx_failed[],
+                tx_meta.result.result.result.tx_fee_bump_inner_success.result.result.tx_success[],
+                tx_meta.result.result.result.tx_fee_bump_inner_failed.result.result.tx_failed[]
+            )::Array(JSON) as ops_result,
 
             arrayConcat(
                 tx_meta.tx_apply_processing[],
@@ -88,7 +100,24 @@ with
                 tx_meta.tx_apply_processing.v4.operations[]
             ) as ops_meta,
 
-            tx_meta.tx_apply_processing.v4.events[] as events
+            tx_meta.fee_processing[] as fee_changes,
+
+            arrayConcat(
+                tx_meta.tx_apply_processing.v1.tx_changes[]
+            ) as tx_changes,
+
+            arrayConcat(
+                tx_meta.tx_apply_processing.v2.tx_changes_before[],
+                tx_meta.tx_apply_processing.v3.tx_changes_before[],
+                tx_meta.tx_apply_processing.v4.tx_changes_before[]
+            ) as tx_changes_before,
+
+            arrayConcat(
+                tx_meta.tx_apply_processing.v2.tx_changes_after[],
+                tx_meta.tx_apply_processing.v3.tx_changes_after[],
+                tx_meta.tx_apply_processing.v4.tx_changes_after[]
+            ) as tx_changes_after
+
         from tx_envelopes
         left join tx_metas
         on hash = tx_meta.result.transaction_hash::String
@@ -104,58 +133,125 @@ with
             result_code as transaction_result_code,
             source_account as transaction_source_account,
             stellar_id(ledger_sequence::Int32, tx_order::Int32, op_order::Int32) as id,
-            splitByChar('.', JSONAllPaths(op.^body)[1])[1] as type,
-            op,
-            op_meta
+            op.source_account::String as source_account_muxed,
+
+            firstNonDefault(
+                splitByChar('.', JSONAllPaths(op.^body)[1])[1],
+                op.body::String
+            ) as type,
+
+            op_meta.changes[]::Array(JSON) as changes
+
         from txs
         array join 
             ops as op,
+            ops_result as op_result,
             ops_meta as op_meta,
             arrayEnumerate(ops) as op_order
+        where result_code in ('success', 'tx_fee_bump_inner_success')
     ),
 
-    tx_events as (
+    upgrade_changes as (
+        select 
+            ledger_sequence,
+            ledger_closed_at,
+            ledger_hash,
+            null as transaction_hash,
+            null as transaction_id,
+            null as source_account,
+            null as operation_id,
+            change::JSON as change
+        from ledgers
+        array join arrayFlatten(upgrade_changes) as change
+    ),
+
+    tx_changes as (
         select 
             ledger_sequence,
             ledger_closed_at,
             ledger_hash,
             hash as transaction_hash,
-            result_code as transaction_result_code,
-            source_account as transaction_source_account,
+            id as transaction_id,
+            source_account,
             null as operation_id,
-            event.^event::JSON as event
-        from txs
-        array join events as event
+            change::JSON as change
+        from txs 
+        array join tx_changes as change
     ),
 
-    ops_events as (
-        select
+    tx_changes_before as (
+        select 
+            ledger_sequence,
+            ledger_closed_at,
+            ledger_hash,
+            hash as transaction_hash,
+            id as transaction_id,
+            source_account,
+            null as operation_id,
+            change::JSON as change
+        from txs 
+        array join tx_changes_before as change
+    ),
+
+    tx_changes_after as (
+        select 
+            ledger_sequence,
+            ledger_closed_at,
+            ledger_hash,
+            hash as transaction_hash,
+            id as transaction_id,
+            source_account,
+            null as operation_id,
+            change::JSON as change
+        from txs 
+        array join tx_changes_after as change
+    ),
+
+    fee_changes as (
+        select 
+            ledger_sequence,
+            ledger_closed_at,
+            ledger_hash,
+            hash as transaction_hash,
+            id as transaction_id,
+            source_account,
+            null as operation_id,
+            change::JSON as change
+        from txs 
+        array join fee_changes as change  
+    ),
+
+    ops_changes as (
+        select 
             ledger_sequence,
             ledger_closed_at,
             ledger_hash,
             transaction_hash,
-            transaction_result_code,
-            transaction_source_account,
+            transaction_id,
+            firstNonDefault(
+                source_account_muxed::String,
+                transaction_source_account
+            ) as source_account,
             id as operation_id,
-            event::JSON as event
-        from ops
-        array join op_meta.events[] as event
-    ),
-
-    all_events as (
-        select * from tx_events
-        union all
-        select * from ops_events
+            change::JSON as change
+        from ops 
+        array join changes as change
     )
 
-select 
-    * except event,  
-    event.contract_id::String as contract_id,
-    event.type_::String as type,
-    event.body.v0.topics[] as topics,
-    event.^body.v0.data as data
-from all_events
+select * from upgrade_changes
+union all 
+select * from tx_changes
+union all
+select * from tx_changes_before
+union all 
+select * from tx_changes_after
+union all 
+select * from fee_changes
+union all
+select * from ops_changes
+
 format Vertical
 settings 
     output_format_arrow_string_as_string=0,
-    enable_unaligned_array_join = 1
+    enable_unaligned_array_join = 1,
+    enable_named_columns_in_function_tuple=1

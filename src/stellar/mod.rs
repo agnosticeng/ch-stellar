@@ -6,6 +6,7 @@ mod ledger_close_meta_ext;
 mod query_params_ext;
 mod result;
 mod utils;
+mod id;
 
 pub use galexie_files::GalexieFiles;
 pub use galexie_ledgers::galexie_ledgers;
@@ -15,3 +16,4 @@ pub use hash::{
     hash_fee_bump_transaction, hash_transaction, hash_transaction_envelope, hash_transaction_v0,
 };
 pub use ledger_close_meta_ext::LedgerCloseMetaExt;
+pub use id::ID;
