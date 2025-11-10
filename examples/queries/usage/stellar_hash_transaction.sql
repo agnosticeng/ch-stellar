@@ -52,6 +52,7 @@ with
     )    
 
 select 
+    txs.tx::String as str,
     stellar_hash_transaction(txs.tx::String, 'Public Global Stellar Network ; September 2015') as tx_hash,
     tx_meta.result.transaction_hash::String as tx_meta_hash
 from txs

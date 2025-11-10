@@ -274,6 +274,7 @@ with
 select
     * except (last_pool_change)
 from trades
+
 format Vertical
 settings 
     output_format_arrow_string_as_string=0,

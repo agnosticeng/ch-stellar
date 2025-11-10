@@ -266,35 +266,70 @@ with
         from all_changes
     ),
 
-    accounts as (
+    liquidity_pools as (
         select
             * except (ledger_entry),
             ledger_entry.last_modified_ledger_seq::UInt32 as last_modified_ledger_sequence,
-            ledger_entry.^data.account as account_entry
+            ledger_entry.^data.liquidity_pool as liquidity_pool_entry
         from changes
-        where empty(account_entry) = 0
+        where empty(liquidity_pool_entry) = 0
     )
 
 select 
-    * except (account_entry),
-    account_entry.account_id::String as account_id,
-    account_entry.balance::UInt64 as balance,
-    account_entry.seq_num::UInt64 as sequence_number,
-    account_entry.num_sub_entries::UInt64 as num_sub_entries,
-    account_entry.flags::String as flags,
-    account_entry.home_domain::String as home_domain,
-    account_entry.ext.v1.liabilities.buying::Int64 as buying_liabilities,
-    account_entry.ext.v1.liabilities.selling::Int64 as selling_liabilities,
-    account_entry.inflation_dest::String as inflation_destination,
-    reinterpretAsUInt8(substring(unhex(account_entry.thresholds::String), 1, 1)) as master_weight,
-    reinterpretAsUInt8(substring(unhex(account_entry.thresholds::String), 2, 1)) as threshold_low,
-    reinterpretAsUInt8(substring(unhex(account_entry.thresholds::String), 3, 1)) as threshold_medium,
-    reinterpretAsUInt8(substring(unhex(account_entry.thresholds::String), 4, 1)) as threshold_high,
-    account_entry.ext.v1.ext.v2.num_sponsored::UInt32 as num_sponsored,
-    account_entry.ext.v1.ext.v2.num_sponsoring::UInt32 as num_sponsoring,
-    account_entry.ext.v1.ext.v2.ext.v3.seq_ledger::UInt32 as sequence_ledger,
-    account_entry.ext.v1.ext.v2.ext.v3.seq_time::UInt64 as sequence_time
-from accounts
+    * except (liquidity_pool_entry),
+    liquidity_pool_entry.liquidity_pool_id::String as liquidity_pool_id,
+    splitByChar('.', JSONAllPaths(liquidity_pool_entry.^body)[1])[1] as type,
+    
+    coalesce(
+        liquidity_pool_entry.body.liquidity_pool_constant_product.params.fee::Nullable(UInt64)
+    ) as fee,
+
+    coalesce(
+        liquidity_pool_entry.body.liquidity_pool_constant_product.pool_shares_trust_line_count::String
+    ) as trustline_count,
+
+    coalesce(
+        liquidity_pool_entry.body.liquidity_pool_constant_product.total_pool_shares
+    ) as pool_share_count,
+
+    firstNonDefault(
+        liquidity_pool_entry.body.liquidity_pool_constant_product.params.asset_a::Nullable(String),
+        splitByChar('.', JSONAllPaths(liquidity_pool_entry.^body.liquidity_pool_constant_product.params.asset_a)[1])[1]
+    ) as asset_a_type,
+
+    firstNonDefault(
+        liquidity_pool_entry.body.liquidity_pool_constant_product.params.asset_a.credit_alphanum4.asset_code::String,
+        liquidity_pool_entry.body.liquidity_pool_constant_product.params.asset_a.credit_alphanum12.asset_code::String,
+    ) as asset_a_code,
+
+    firstNonDefault(
+        liquidity_pool_entry.body.liquidity_pool_constant_product.params.asset_a.credit_alphanum4.issuer::String,
+        liquidity_pool_entry.body.liquidity_pool_constant_product.params.asset_a.credit_alphanum12.issuer::String,
+    ) as asset_a_issuer,
+
+    coalesce(
+        liquidity_pool_entry.body.liquidity_pool_constant_product.reserve_a::Nullable(UInt64)
+    ) as asset_a_amount,
+
+    firstNonDefault(
+        liquidity_pool_entry.body.liquidity_pool_constant_product.params.asset_b::Nullable(String),
+        splitByChar('.', JSONAllPaths(liquidity_pool_entry.^body.liquidity_pool_constant_product.params.asset_b)[1])[1]
+    ) as asset_b_type,
+
+    firstNonDefault(
+        liquidity_pool_entry.body.liquidity_pool_constant_product.params.asset_b.credit_alphanum4.asset_code::String,
+        liquidity_pool_entry.body.liquidity_pool_constant_product.params.asset_b.credit_alphanum12.asset_code::String,
+    ) as asset_b_code,
+
+    firstNonDefault(
+        liquidity_pool_entry.body.liquidity_pool_constant_product.params.asset_b.credit_alphanum4.issuer::String,
+        liquidity_pool_entry.body.liquidity_pool_constant_product.params.asset_b.credit_alphanum12.issuer::String,
+    ) as asset_b_issuer,
+
+    coalesce(
+        liquidity_pool_entry.body.liquidity_pool_constant_product.reserve_b::Nullable(UInt64)
+    ) as asset_b_amount
+from liquidity_pools
 
 format Vertical
 settings 

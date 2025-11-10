@@ -155,6 +155,7 @@ select
     event.body.v0.topics[] as topics,
     event.^body.v0.data as data
 from all_events
+
 format Vertical
 settings 
     output_format_arrow_string_as_string=0,

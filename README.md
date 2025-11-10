@@ -12,11 +12,13 @@ Whether you're building blockchain explorers, indexing on-chain data, or running
 
 - [**Fast, optimized RPC calls**](./docs/json_rpc_client.md) to Stellar-RPC nodes directly from ClickHouse queries
     - [stellar_rpc](./docs/functions/stellar_rpc.md)
-- Utility functuins for working with Stellar XDR encoded structures
+- Utility functions for working with Stellar XDR encoded structures
     - [stellar_xdr_decode](./docs/functions/stellar_xdr_decode.md)
 - Query Galexie data lakes directly from within your SQL queries
     - [stellar_galexie](./docs/table_functions/stellar_galexie.md)
-
+- Utility functions
+    - [stellar_id](./docs/functions/stellar_id.md)
+    - [stellar_transaction_hash](./docs/functions/stellar_transaction_hash.md)
 
 ## 📦 Artifact: The Bundle
 

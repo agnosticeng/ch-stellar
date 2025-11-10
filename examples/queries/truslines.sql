@@ -266,35 +266,41 @@ with
         from all_changes
     ),
 
-    accounts as (
+    trustlines as (
         select
             * except (ledger_entry),
             ledger_entry.last_modified_ledger_seq::UInt32 as last_modified_ledger_sequence,
-            ledger_entry.^data.account as account_entry
+            ledger_entry.^data.trustline as trustline_entry
         from changes
-        where empty(account_entry) = 0
+        where empty(trustline_entry) = 0
     )
 
 select 
-    * except (account_entry),
-    account_entry.account_id::String as account_id,
-    account_entry.balance::UInt64 as balance,
-    account_entry.seq_num::UInt64 as sequence_number,
-    account_entry.num_sub_entries::UInt64 as num_sub_entries,
-    account_entry.flags::String as flags,
-    account_entry.home_domain::String as home_domain,
-    account_entry.ext.v1.liabilities.buying::Int64 as buying_liabilities,
-    account_entry.ext.v1.liabilities.selling::Int64 as selling_liabilities,
-    account_entry.inflation_dest::String as inflation_destination,
-    reinterpretAsUInt8(substring(unhex(account_entry.thresholds::String), 1, 1)) as master_weight,
-    reinterpretAsUInt8(substring(unhex(account_entry.thresholds::String), 2, 1)) as threshold_low,
-    reinterpretAsUInt8(substring(unhex(account_entry.thresholds::String), 3, 1)) as threshold_medium,
-    reinterpretAsUInt8(substring(unhex(account_entry.thresholds::String), 4, 1)) as threshold_high,
-    account_entry.ext.v1.ext.v2.num_sponsored::UInt32 as num_sponsored,
-    account_entry.ext.v1.ext.v2.num_sponsoring::UInt32 as num_sponsoring,
-    account_entry.ext.v1.ext.v2.ext.v3.seq_ledger::UInt32 as sequence_ledger,
-    account_entry.ext.v1.ext.v2.ext.v3.seq_time::UInt64 as sequence_time
-from accounts
+    *, except (trustline_entry)
+    trustline_entry.account_id::String as account_id,
+
+    firstNonDefault(
+        trustline_entry.asset::Nullable(String),
+        splitByChar('.', JSONAllPaths(trustline_entry.^asset)[1])[1]
+    ) as asset_type,
+
+    firstNonDefault(
+        trustline_entry.credit_alphanum4.asset_code::String,
+        trustline_entry.credit_alphanum12.asset_code::String
+    ) as asset_code,
+
+    firstNonDefault(
+        trustline_entry.credit_alphanum4.issuer::String,
+        trustline_entry.credit_alphanum12.issuer::String
+    ) as asset_issuer,  
+
+    trustline_entry.balance::UInt64 as balance,
+    trustline_entry.limit::UInt64 as limits,
+    trustline_entry.flags::UInt32 as flags,
+
+    trustline_entry.ext.v1.liabilities.buying::Int64 as buying_liabilities,
+    trustline_entry.ext.v1.liabilities.selling::Int64 as selling_liabilities
+from trustlines
 
 format Vertical
 settings 
