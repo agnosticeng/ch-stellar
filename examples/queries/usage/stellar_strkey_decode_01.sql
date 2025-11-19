@@ -1,0 +1,3 @@
+select stellar_strkey_decode('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF')
+
+settings output_format_arrow_string_as_string=0

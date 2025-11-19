@@ -49,3 +49,4 @@ alloy-json-rpc = "1.0.30"
 sha256 = "1.6.0"
 sha2 = "0.10.9"
 hex = "0.4.3"
+stellar-strkey = { version = "0.0.14", features = ["cli"] }
