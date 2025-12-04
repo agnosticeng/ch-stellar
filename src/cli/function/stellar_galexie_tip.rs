@@ -1,10 +1,10 @@
-use crate::arrow_ext::RecordBatchExt;
 use crate::stellar::galexie_tip;
 use anyhow::{Context, Result};
 use arrow::array::{BinaryArray, RecordBatch, UInt32Builder};
 use arrow::datatypes::{DataType, Field, Schema};
 use arrow_ipc::reader::StreamReader;
 use arrow_ipc::writer::StreamWriter;
+use ch_udf_common::arrow::RecordBatchExt;
 use clap::Args;
 use core::str;
 use std::io::{stdin, stdout};

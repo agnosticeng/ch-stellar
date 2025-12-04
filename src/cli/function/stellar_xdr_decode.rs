@@ -1,11 +1,11 @@
-use crate::arrow_ext::RecordBatchExt;
-use crate::json_result::JSONResult;
 use crate::stellar::DEFAULT_XDR_RW_DEPTH_LIMIT;
 use anyhow::{Context, Result};
 use arrow::array::{BinaryArray, GenericByteBuilder, RecordBatch};
 use arrow::datatypes::{BinaryType, DataType, Field, Schema};
 use arrow_ipc::reader::StreamReader;
 use arrow_ipc::writer::StreamWriter;
+use ch_udf_common::arrow::RecordBatchExt;
+use ch_udf_common::json_result::JSONResult;
 use clap::Args;
 use core::str;
 use itertools::izip;

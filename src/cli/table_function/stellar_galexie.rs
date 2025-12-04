@@ -1,10 +1,10 @@
-use crate::arrow_ext::RecordBatchExt;
 use crate::stellar::galexie_ledgers;
 use anyhow::{Context, Result};
 use arrow::array::{BinaryArray, GenericByteBuilder, RecordBatch, UInt32Array};
 use arrow::datatypes::{BinaryType, DataType, Field, Schema};
 use arrow_ipc::reader::StreamReader;
 use arrow_ipc::writer::StreamWriter;
+use ch_udf_common::arrow::RecordBatchExt;
 use clap::Args;
 use core::str;
 use futures::{StreamExt, pin_mut};
@@ -28,7 +28,9 @@ impl StellarGalexieCommand {
         for input_batch in reader {
             let input_batch = input_batch.context("failed to read input batch")?;
 
-            let mut result_col_builder = GenericByteBuilder::<BinaryType>::new();
+            let mut result_col_builder: GenericByteBuilder<
+                arrow::datatypes::GenericBinaryType<i32>,
+            > = GenericByteBuilder::<BinaryType>::new();
 
             let url_col: &BinaryArray = input_batch.get_column("url")?;
             let start_col: &UInt32Array = input_batch.get_column("start")?;

@@ -13,40 +13,23 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.98"
-arrow = "55.1.0"
-arrow-ipc = { version = "55.1.0", features = ["lz4"]}
+arrow = "56.2.0"
+arrow-ipc = { version = "56.2.0", features = ["lz4"]}
 clap = { version = "4.5.37", features = ["derive"]}
 futures = "0.3.31"
-serde = "1.0.219"
 serde_json = "1.0.140"
 tokio = { version = "1.45.0", features = ["rt-multi-thread", "io-std", "io-util", "fs"] }
 object_store = { version = "0.12.4", features = ["http", "aws"] }
 url = "2.5.4"
 itertools = "0.14.0"
-serde_qs = "0.15.0"
-tower = { version = "0.5.2", features = ["retry", "limit", "util"] }
-futures-util = "0.3.31"
-duration-str = "0.17.0"
 thiserror = "2.0.12"
-serde_with = "3.12.0"
-backoff = "0.4.0"
-serde-inline-default = "0.2.3"
-tokio-util = "0.7.15"
-futures-core = "0.3.31"
-lazy_static = "1.5.0"
-quick_cache = "0.6.14"
-serde_yaml = "0.9.34"
-serde-transcode = "1.1.1"
-toml = "0.8.23"
 mimalloc = "0.1.47"
 bytes = "1.10.1"
-stellar-xdr = { version = "23.0.0", features = ["base64", "hex", "next", "serde", "serde_json", "std"] }
+stellar-xdr = { version = "25.0.0", features = ["base64", "hex", "next", "serde", "serde_json", "std"] }
 zstd = "0.13.3"
 stream-flatten-iters = "0.2.0"
 querystring = "1.1.0"
-alloy = "1.0.30"
-alloy-json-rpc = "1.0.30"
-sha256 = "1.6.0"
 sha2 = "0.10.9"
 hex = "0.4.3"
 stellar-strkey = { version = "0.0.14", features = ["cli"] }
+ch-udf-common = { git = "https://github.com/agnosticeng/ch-udf-common.git", tag = "v0.2.0" }
