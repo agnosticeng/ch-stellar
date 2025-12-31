@@ -3,7 +3,7 @@ select
 from executable(
     'ch-stellar table-function stellar-galexie',
     ArrowStream, 
-    'ledger_close_meta JSON',
+    'ledger_close_meta String',
     (
         select
             'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst' as url,

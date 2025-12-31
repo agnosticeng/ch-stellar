@@ -4,7 +4,7 @@
         <type>executable_pool</type>
         <format>ArrowStream</format>
         <stderr_reaction>log</stderr_reaction>
-        <command>ch-stellar function stellar-xdr-decode</command>
+        <command>ch-stellar function xdr-decode</command>
 
         <pool_size>16</pool_size>
         <max_command_execution_time>300</max_command_execution_time>

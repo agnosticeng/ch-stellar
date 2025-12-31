@@ -12,7 +12,7 @@ pub enum StellarError {
     #[error("URL parsing error")]
     URLParse(#[from] url::ParseError),
     #[error("XDR error")]
-    XDRError(#[from] stellar_xdr::next::Error),
+    XDRError(#[from] stellar_xdr::curr::Error),
     #[error("wrong XDR type")]
     WrongXDRType,
     #[error("empty Galexie datalake")]

@@ -2,8 +2,8 @@ use super::GalexieFiles;
 use super::LedgerCloseMetaExt;
 use super::query_params_ext::QueryParamsExt;
 use super::result::{Result, StellarError};
-use super::utils::build_opts;
 use bytes::{Buf, Bytes};
+use ch_udf_common::object_store::{opts_from_env, opts_from_url};
 use futures::stream::{self, StreamExt};
 use futures::{Stream, TryStreamExt};
 use itertools::Itertools;
@@ -12,9 +12,8 @@ use std::future;
 use std::io::Read;
 use std::str;
 use std::sync::Arc;
-use stellar_xdr::next::{LedgerCloseMeta, Limited, Limits, Type, TypeVariant};
+use stellar_xdr::curr::{LedgerCloseMeta, Limited, Limits, Type, TypeVariant};
 use stream_flatten_iters::TryStreamExt as _;
-use tokio::time::{Duration, sleep};
 use url::Url;
 use zstd::stream::read::Decoder;
 
@@ -26,9 +25,11 @@ pub fn galexie_ledgers<'a>(
     start: Option<u32>,
     end: Option<u32>,
 ) -> Result<impl Stream<Item = Result<Box<LedgerCloseMeta>>> + 'a> {
-    let u = Arc::new(Url::parse(base_url)?);
-    let opts = Arc::new(build_opts(&u));
-    let opts1 = opts.clone();
+    let mut u = Url::parse(base_url)?;
+    let opts = itertools::concat([opts_from_env(), opts_from_url(&u)]);
+    let opts_1 = opts.clone();
+    u.set_fragment(None);
+    let u = Arc::new(u);
 
     let it = GalexieFiles::new(
         opts.get_or_default("ledgers_per_file", 64),
@@ -44,7 +45,7 @@ pub fn galexie_ledgers<'a>(
             let opts = opts.clone();
             async move { download_file(u.as_ref(), &file_path, opts.as_ref()).await }
         })
-        .buffered(opts1.get_or_default("max_concurrent_requests", 3))
+        .buffered(opts_1.get_or_default("max_concurrent_requests", 3))
         .and_then(decompress_file)
         .and_then(decode_xdr)
         .try_flatten_iters()
@@ -62,30 +63,6 @@ pub async fn download_file(
     let u = base_url.clone().join(file_path)?;
     let (objstr, path) = parse_url_opts(&u, opts.to_owned())?;
     Ok(objstr.get(&path).await?.bytes().await?)
-}
-
-pub async fn check_file_exists(
-    base_url: &Url,
-    file_path: &str,
-    opts: &[(String, String)],
-) -> Result<bool> {
-    loop {
-        let u = base_url.clone().join(file_path)?;
-        let (objstr, path) = parse_url_opts(&u, opts.to_owned())?;
-
-        match objstr.head(&path).await {
-            Ok(_) => return Ok(true),
-            Err(object_store::Error::NotFound { .. }) => return Ok(false),
-            Err(e) => {
-                if e.to_string().contains("429") {
-                    sleep(Duration::from_millis(1000)).await;
-                    continue;
-                } else {
-                    return Err(StellarError::ObjectStore(e));
-                }
-            }
-        }
-    }
 }
 
 async fn decompress_file(data: Bytes) -> Result<Vec<u8>> {

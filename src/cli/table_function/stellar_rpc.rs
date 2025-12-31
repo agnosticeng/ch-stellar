@@ -40,17 +40,17 @@ impl StellarRpcCommand {
                 loop {
                     let mut params = serde_json::from_slice::<serde_json::Value>(params.unwrap())?;
 
-                    if let Some(v) = curr {
-                        if let Some(m) = params.as_object_mut() {
-                            m.insert(
-                                "pagination".to_string(),
-                                json!({
-                                    "cursor": v
-                                }),
-                            );
-                            m.remove("startLedger");
-                            m.remove("endLedger");
-                        }
+                    if let Some(v) = curr
+                        && let Some(m) = params.as_object_mut()
+                    {
+                        m.insert(
+                            "pagination".to_string(),
+                            json!({
+                                "cursor": v
+                            }),
+                        );
+                        m.remove("startLedger");
+                        m.remove("endLedger");
                     }
 
                     let mut res = client

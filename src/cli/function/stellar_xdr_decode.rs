@@ -12,7 +12,7 @@ use itertools::izip;
 use std::io::{stdin, stdout};
 use std::str::FromStr;
 use std::sync::Arc;
-use stellar_xdr::next::{Limited, Limits, Type, TypeVariant};
+use stellar_xdr::curr::{Limited, Limits, Type, TypeVariant};
 
 #[derive(Debug, Clone, Args)]
 pub struct StellarXdrDecodeCommand {}

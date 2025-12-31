@@ -8,8 +8,8 @@ use stellar_rpc::StellarRpcCommand;
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum TableFunctionCommand {
-    StellarGalexie(StellarGalexieCommand),
-    StellarRpc(StellarRpcCommand),
+    Galexie(StellarGalexieCommand),
+    Rpc(StellarRpcCommand),
 }
 
 #[derive(Clone, Debug, Args)]
@@ -21,8 +21,8 @@ pub struct TableFunction {
 impl TableFunction {
     pub async fn run(&self) -> Result<()> {
         match &self.cmd {
-            TableFunctionCommand::StellarGalexie(cmd) => cmd.run().await,
-            TableFunctionCommand::StellarRpc(cmd) => cmd.run().await,
+            TableFunctionCommand::Galexie(cmd) => cmd.run().await,
+            TableFunctionCommand::Rpc(cmd) => cmd.run().await,
         }
     }
 }

@@ -1,7 +1,7 @@
 use super::galexie_ledgers::{DEFAULT_XDR_RW_DEPTH_LIMIT, DEFAULT_XDR_RW_LEN_LIMIT};
 use super::result::{Result, StellarError};
 use sha2::{Digest, Sha256};
-use stellar_xdr::next::{
+use stellar_xdr::curr::{
     FeeBumpTransaction, Hash, Limits, MuxedAccount, Preconditions, Transaction,
     TransactionEnvelope, TransactionExt, TransactionSignaturePayload,
     TransactionSignaturePayloadTaggedTransaction, TransactionV0, WriteXdr,

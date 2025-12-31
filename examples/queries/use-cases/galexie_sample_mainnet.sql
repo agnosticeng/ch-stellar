@@ -1,10 +1,10 @@
-insert into function file('./tmp/galexie_sample.bin', 'Native')
+insert into function file('./tmp/galexie_sample_mainnet.bin', 'Native')
 select 
     ledger_close_meta
 from executable(
     'ch-stellar table-function stellar-galexie',
     ArrowStream,
-    'ledger_close_meta JSON',
+    'ledger_close_meta String',
     (
         select 
             *
