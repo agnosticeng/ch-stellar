@@ -48,7 +48,5 @@ pub async fn galexie_tip(base_url: &str) -> Result<u32> {
         .parse::<u32>()
         .map_err(|_| StellarError::WrongGalexieFilename(meta.location.to_string()))?;
 
-    eprintln!("{:?}", meta.location);
-
     Ok(tip)
 }
