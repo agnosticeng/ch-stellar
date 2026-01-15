@@ -1,15 +1,12 @@
 use crate::stellar::galexie_tip;
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Context, Result};
 use arrow::array::{BinaryArray, RecordBatch, UInt32Builder};
-use arrow::datatypes::{BinaryType, DataType, Field, Schema};
+use arrow::datatypes::{DataType, Field, Schema};
 use arrow_ipc::reader::StreamReader;
 use arrow_ipc::writer::StreamWriter;
 use ch_udf_common::arrow::RecordBatchExt;
-use ch_udf_common::json_result::JSONResult;
-use ch_udf_common::json_rpc::{JSONRPCCall, JSONRpcClient};
 use clap::Args;
 use core::str;
-use itertools::izip;
 use std::io::{stdin, stdout};
 use std::sync::Arc;
 
