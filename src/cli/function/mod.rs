@@ -1,4 +1,5 @@
 mod stellar_asset_id;
+mod stellar_galexie_tip;
 mod stellar_hash_transaction;
 mod stellar_id;
 mod stellar_rpc;
@@ -9,6 +10,7 @@ mod stellar_xdr_decode;
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use stellar_asset_id::StellarAssetIdCommand;
+use stellar_galexie_tip::StellarGalexieTipCommand;
 use stellar_hash_transaction::StellarHashTransactionCommand;
 use stellar_id::StellarIdCommand;
 use stellar_rpc::StellarRpcCommand;
@@ -25,6 +27,7 @@ pub enum FunctionCommand {
     StrkeyDecode(StellarStrkeyDecodeCommand),
     Unmux(StellarUnmuxCommand),
     AssetId(StellarAssetIdCommand),
+    GalexieTip(StellarGalexieTipCommand),
 }
 
 #[derive(Clone, Debug, Args)]
@@ -43,6 +46,7 @@ impl Function {
             FunctionCommand::StrkeyDecode(cmd) => cmd.run().await,
             FunctionCommand::Unmux(cmd) => cmd.run().await,
             FunctionCommand::AssetId(cmd) => cmd.run().await,
+            FunctionCommand::GalexieTip(cmd) => cmd.run().await,
         }
     }
 }

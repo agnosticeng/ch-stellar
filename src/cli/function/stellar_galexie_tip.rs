@@ -1,22 +1,26 @@
-use anyhow::{Context, Result};
-use arrow::array::{BinaryArray, RecordBatch, UInt64Builder};
-use arrow::datatypes::{DataType, Field, Schema};
+use crate::stellar::galexie_tip;
+use anyhow::{Context, Result, anyhow, bail};
+use arrow::array::{BinaryArray, RecordBatch, UInt32Builder};
+use arrow::datatypes::{BinaryType, DataType, Field, Schema};
 use arrow_ipc::reader::StreamReader;
 use arrow_ipc::writer::StreamWriter;
 use ch_udf_common::arrow::RecordBatchExt;
+use ch_udf_common::json_result::JSONResult;
+use ch_udf_common::json_rpc::{JSONRPCCall, JSONRpcClient};
 use clap::Args;
+use core::str;
 use itertools::izip;
 use std::io::{stdin, stdout};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Args)]
-pub struct StellarAssetIdCommand {}
+pub struct StellarGalexieTipCommand {}
 
-impl StellarAssetIdCommand {
+impl StellarGalexieTipCommand {
     pub async fn run(&self) -> Result<()> {
         let output_schema = Arc::new(Schema::new(vec![Field::new(
             "result",
-            DataType::UInt64,
+            DataType::UInt32,
             false,
         )]));
 
@@ -26,23 +30,12 @@ impl StellarAssetIdCommand {
 
             for input_batch in reader {
                 let input_batch = input_batch.context("failed to read input batch")?;
-                let mut result_col_builder: arrow::array::PrimitiveBuilder<
-                    arrow::datatypes::UInt64Type,
-                > = UInt64Builder::with_capacity(input_batch.num_rows());
-                let asset_code_col: &BinaryArray = input_batch.get_column("asset_code")?;
-                let asset_issue_col: &BinaryArray = input_batch.get_column("asset_issuer")?;
-                let asset_type_col: &BinaryArray = input_batch.get_column("asset_type")?;
+                let mut result_col_builder = UInt32Builder::with_capacity(input_batch.num_rows());
+                let url_col: &BinaryArray = input_batch.get_column("url")?;
 
-                let it = izip!(asset_code_col, asset_issue_col, asset_type_col).map(
-                    |(code, issuer, _type)| {
-                        let buf: Vec<u8> =
-                            [code.unwrap(), issuer.unwrap(), _type.unwrap()].concat();
-                        farmhash::hash64(&buf)
-                    },
-                );
-
-                for v in it {
-                    result_col_builder.append_value(v);
+                for url in url_col {
+                    result_col_builder
+                        .append_value(galexie_tip(str::from_utf8(url.unwrap())?).await?);
                 }
 
                 let result_col = result_col_builder.finish();

@@ -4,24 +4,24 @@ pub struct GalexieFiles {
     extension: String,
     next_start: u32,
     end: Option<u32>,
-} 
+}
 
 impl GalexieFiles {
     pub fn new(
         ledgers_per_file: u32,
-        files_per_partition: u32, 
+        files_per_partition: u32,
         extension: Option<String>,
-        start: Option<u32>, 
-        end: Option<u32>
+        start: Option<u32>,
+        end: Option<u32>,
     ) -> Self {
         let start = start.unwrap_or(0);
 
-        GalexieFiles{
+        GalexieFiles {
             ledgers_per_file,
             files_per_partition,
             extension: extension.unwrap_or("xdr.zstd".to_string()),
             next_start: (start / ledgers_per_file) * ledgers_per_file,
-            end
+            end,
         }
     }
 

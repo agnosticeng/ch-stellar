@@ -1,11 +1,11 @@
-### stellar_transaction_hash
+### stellar_hash_transaction
 
 Generate the hash of a transaction given it's JSON-encoded envelope.
 
 **Syntax**
 
 ```sql
-select stellar_transaction_hash(envelope, passphrase)
+select stellar_hash_transaction(envelope, passphrase)
 ```
 
 **Parameters**

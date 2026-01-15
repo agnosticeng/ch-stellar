@@ -1,7 +1,7 @@
 with 
     t as (
         select * from executable(
-            'ch-stellar table-function stellar-rpc',
+            'ch-stellar table-function rpc',
             ArrowStream,
             'result JSON',
             (

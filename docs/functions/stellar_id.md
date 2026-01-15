@@ -26,12 +26,6 @@ Query:
 select stellar_id(1::Int32, 1::Int32, 1::Int32)
 ```
 
-
-```sql
-select stellar_xdr_decode('TransactionEvent', 'AAAAAAAAAAAAAAABJbT82FmuwvpjSEOMSJs8PBDJi20hvk\/TyzDLaJU++XcAAAABAAAAAAAAAAIAAAAPAAAAA2ZlZQAAAAASAAAAAAAAAABmOMzcP3GB7aqvq\/w2S20taRvi4ycXhF9ChvSvlfhGjAAAAAoAAAAAAAAAAAAAAAAAAAEs') as decoded
-settings output_format_arrow_string_as_string=0
-```
-
 Result:
 
 | id |

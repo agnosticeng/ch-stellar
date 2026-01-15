@@ -2,9 +2,9 @@ select
     ledger_close_meta.v0.ledger_header.header.ledger_seq as sequence,
     ledger_close_meta.v0.ledger_header.header.scp_value.close_time as close_time
 from executable(
-    'ch-stellar table-function stellar-galexie',
+    'ch-stellar table-function galexie',
     ArrowStream,
-    'ledger_close_meta String',
+    'ledger_close_meta JSON',
     (
         select * from values(
             'url String, start UInt32, end UInt32',

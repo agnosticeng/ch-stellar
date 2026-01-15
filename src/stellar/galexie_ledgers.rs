@@ -3,7 +3,7 @@ use super::LedgerCloseMetaExt;
 use super::query_params_ext::QueryParamsExt;
 use super::result::{Result, StellarError};
 use bytes::{Buf, Bytes};
-use ch_udf_common::object_store::{opts_from_env, opts_from_url};
+use ch_udf_common::object_store::{opts_from_env, opts_from_query_string};
 use futures::stream::{self, StreamExt};
 use futures::{Stream, TryStreamExt};
 use itertools::Itertools;
@@ -26,8 +26,10 @@ pub fn galexie_ledgers<'a>(
     end: Option<u32>,
 ) -> Result<impl Stream<Item = Result<Box<LedgerCloseMeta>>> + 'a> {
     let mut u = Url::parse(base_url)?;
-    let opts = itertools::concat([opts_from_env(), opts_from_url(&u)]);
-    let opts_1 = opts.clone();
+    let opts = itertools::concat([
+        opts_from_env(),
+        opts_from_query_string(&u.fragment().unwrap_or("")),
+    ]);
     u.set_fragment(None);
     let u = Arc::new(u);
 
@@ -40,12 +42,15 @@ pub fn galexie_ledgers<'a>(
     );
 
     Ok(stream::iter(it)
-        .map(move |file_path| {
-            let u = u.clone();
+        .map({
             let opts = opts.clone();
-            async move { download_file(u.as_ref(), &file_path, opts.as_ref()).await }
+            move |file_path| {
+                let u = u.clone();
+                let opts = opts.clone();
+                async move { download_file(u.as_ref(), &file_path, opts.as_ref()).await }
+            }
         })
-        .buffered(opts_1.get_or_default("max_concurrent_requests", 3))
+        .buffered(opts.clone().get_or_default("max_concurrent_requests", 3))
         .and_then(decompress_file)
         .and_then(decode_xdr)
         .try_flatten_iters()

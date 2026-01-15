@@ -15,22 +15,23 @@ path = "src/main.rs"
 anyhow = "1.0.98"
 arrow = "57"
 arrow-ipc = { version = "57", features = ["lz4"]}
-clap = { version = "4.5.37", features = ["derive"]}
-futures = "0.3.31"
-serde_json = "1.0.140"
-tokio = { version = "1.45.0", features = ["rt-multi-thread", "io-std", "io-util", "fs"] }
-object_store = { version = "0.12.4", features = ["http", "aws"] }
-url = "2.5.4"
-itertools = "0.14.0"
-thiserror = "2.0.12"
+clap = { version = "4", features = ["derive"]}
+futures = "0.3"
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "io-std", "io-util", "fs"] }
+object_store = { version = "0.12", features = ["http", "aws"] }
+url = "2"
+itertools = "0.14"
+thiserror = "2"
 mimalloc = "0.1.47"
 bytes = "1.10.1"
-stellar-xdr = { version = "25.0.0", features = ["curr", "base64", "hex", "serde", "serde_json", "std"] }
-zstd = "0.13.3"
-stream-flatten-iters = "0.2.0"
-querystring = "1.1.0"
-sha2 = "0.10.9"
-hex = "0.4.3"
+stellar-xdr = { version = "25", features = ["curr", "base64", "hex", "serde", "serde_json", "std"] }
+zstd = "0.13"
+stream-flatten-iters = "0.2"
+querystring = "1"
+sha2 = "0.10"
+hex = "0.4"
 stellar-strkey = { version = "0.0.14", features = ["cli"] }
-ch-udf-common = { git = "https://github.com/agnosticeng/ch-udf-common.git", tag = "v0.5.0" }
-farmhash = "1.1.5"
+ch-udf-common = { git = "https://github.com/agnosticeng/ch-udf-common.git", branch = "main" }
+farmhash = "1"
+regex = "1.12.2"

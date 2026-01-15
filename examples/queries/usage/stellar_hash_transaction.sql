@@ -3,7 +3,7 @@ with
         select 
             ledger_close_meta
         from executable(
-            'ch-stellar table-function stellar-galexie',
+            'ch-stellar table-function galexie',
             ArrowStream,
             'ledger_close_meta JSON',
             (

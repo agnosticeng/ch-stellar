@@ -1,9 +1,9 @@
 select 
     ledger_close_meta.v0.ledger_header.header.ledger_seq
 from executable(
-    'ch-stellar table-function stellar-galexie',
+    'ch-stellar table-function galexie',
     ArrowStream, 
-    'ledger_close_meta String',
+    'ledger_close_meta JSON',
     (
         select
             'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst' as url,

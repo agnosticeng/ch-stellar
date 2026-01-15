@@ -1412,7 +1412,7 @@ dependencies = [
 [[package]]
 name = "ch-udf-common"
 version = "0.0.1"
-source = "git+https://github.com/agnosticeng/ch-udf-common.git?tag=v0.5.0#866f2a6f3f3a34ebb3a1fef7534cc15feeee653c"
+source = "git+https://github.com/agnosticeng/ch-udf-common.git?branch=main#cdc969bfac31d2f8f3e5204b28ef01a05feec437"
 dependencies = [
  "alloy",
  "alloy-json-rpc",
@@ -1453,6 +1453,7 @@ dependencies = [
  "mimalloc",
  "object_store",
  "querystring",
+ "regex",
  "serde_json",
  "sha2",
  "stellar-strkey 0.0.14",
@@ -3573,9 +3574,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.11.2"
+version = "1.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23d7fd106d8c02486a8d64e778353d1cffe08ce79ac2e82f540c86d0facf6912"
+checksum = "843bc0191f75f3e22651ae5f1e72939ab2f72a4bc30fa80a066bd66edefc24d4"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -3585,9 +3586,9 @@ dependencies = [
 
 [[package]]
 name = "regex-automata"
-version = "0.4.10"
+version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b9458fa0bfeeac22b5ca447c63aaf45f28439a709ccd244698632f9aa6394d6"
+checksum = "5276caf25ac86c8d810222b3dbb938e512c55c6831a10f3e6ed1c93b84041f1c"
 dependencies = [
  "aho-corasick",
  "memchr",

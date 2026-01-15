@@ -19,4 +19,6 @@ pub enum StellarError {
     EmptyGalexieDataLake,
     #[error("empty network passphrase")]
     EmptyNetworkPassphrase,
+    #[error("wrong galexie filename {0}")]
+    WrongGalexieFilename(String),
 }
