@@ -12,7 +12,7 @@ pub async fn galexie_tip(base_url: &str) -> Result<u32> {
     let mut u = Url::parse(base_url)?;
     let opts = itertools::concat([
         opts_from_env(),
-        opts_from_query_string(&u.fragment().unwrap_or("")),
+        opts_from_query_string(u.fragment().unwrap_or("")),
     ]);
     u.set_fragment(None);
     let u = Arc::new(u);

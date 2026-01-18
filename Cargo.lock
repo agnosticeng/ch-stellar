@@ -1412,7 +1412,7 @@ dependencies = [
 [[package]]
 name = "ch-udf-common"
 version = "0.0.1"
-source = "git+https://github.com/agnosticeng/ch-udf-common.git?branch=main#cdc969bfac31d2f8f3e5204b28ef01a05feec437"
+source = "git+https://github.com/agnosticeng/ch-udf-common.git?branch=main#9df14bee60afb494b26859d01f631dc105fe6373"
 dependencies = [
  "alloy",
  "alloy-json-rpc",
