@@ -1,12 +1,12 @@
 insert into function file('./tmp/galexie_sample_testnet.bin', 'Native')
-select 
+select
     ledger_close_meta
 from executable(
-    'ch-stellar table-function stellar-galexie',
+    'ch-stellar table-function galexie',
     ArrowStream,
     'ledger_close_meta String',
     (
-        select 
+        select
             *
         from values(
             'url String, start UInt32, end UInt32',
@@ -22,8 +22,8 @@ from executable(
             )
         )
     ),
-    settings 
-        stderr_reaction='log', 
+    settings
+        stderr_reaction='log',
         check_exit_code=true,
         command_read_timeout=60000
 )

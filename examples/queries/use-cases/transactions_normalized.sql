@@ -1,60 +1,53 @@
 with
     galexie as (
-        select * from file('./tmp/galexie_sample_mainnet.bin', 'Native')
+        select * from file('./tmp/galexie_sample_normalized_mainnet.bin', 'Native')
     ),
 
     ledgers as (
         select
-            firstNonDefault(
-                JSONExtractString(ledger_close_meta, 'v0'),
-                JSONExtractString(ledger_close_meta, 'v1'),
-                JSONExtractString(ledger_close_meta, 'v2')
-            ) as _lcm_raw,
-
-            JSONExtract(_lcm_raw, ' Tuple(
+            JSONExtract(ledger, 'Tuple(
                 ledger_header Tuple(
                     hash String,
                     header Tuple(
                         ledger_seq Int32,
+                        previous_ledger_hash String,
+                        total_coins UInt64,
+                        fee_pool UInt64,
+                        base_fee UInt64,
+                        base_reserve UInt64,
+                        max_tx_set_size UInt32,
+                        ledger_version UInt32,
                         scp_value Tuple(
-                            close_time DateTime64(6, \'UTC\')
+                            close_time DateTime64(6, \'UTC\'),
+                            ext Tuple(
+                                signed Tuple(
+                                    node_id String,
+                                    signature String
+                                )
+                            )
                         )
                     )
                 ),
-                tx_set Tuple(
-                    txs Array(String),
+                tx_set Array(String),
+                tx_processing Array(String),
+                total_byte_size_of_live_soroban_state UInt64,
+                ext Tuple(
                     v1 Tuple(
-                        phases Array(Tuple(
-                            v0 Array(Tuple(
-                                txset_comp_txs_maybe_discounted_fee Tuple(
-                                    txs Array(String)
-                                )
-                            )),
-                            v1 Tuple(
-                                execution_stages Array(Array(Array(String)))
-                            )
-                        ))
+                        soroban_fee_write1_kb UInt64
                     )
-                ),
-                tx_processing Array(String)
-            )') as _lcm,
+                )
+            )') as _ledger,
 
-            _lcm.ledger_header.header.ledger_seq as ledger_sequence,
-            _lcm.ledger_header.header.scp_value.close_time as ledger_close_time,
-            _lcm.ledger_header.hash as ledger_hash,
+            _ledger.ledger_header.header.ledger_seq as ledger_sequence,
+            _ledger.ledger_header.header.scp_value.close_time as ledger_close_time,
+            _ledger.ledger_header.hash as ledger_hash,
 
-            arrayConcat(
-                _lcm.tx_set.txs,
-                arrayFlatten(_lcm.tx_set.v1.phases.v0.txset_comp_txs_maybe_discounted_fee.txs),
-                arrayFlatten(_lcm.tx_set.v1.phases.v1.execution_stages)
-            ) as _tx_envelopes_raw,
-
-            _lcm.tx_processing as _tx_result_metas_raw
-
+            _ledger.tx_set as _tx_envelopes_raw,
+            _ledger.tx_processing as _tx_result_metas_raw
         from galexie
     ),
 
-    tx_envelopes as (
+    txs as (
         select
             columns('^[^_]'),
 
@@ -119,14 +112,88 @@ with
                 )'
             ) _tx_envelope_inner,
 
-            stellar_hash_transaction(
-                _tx_envelope_raw,
-                'Public Global Stellar Network ; September 2015'
-            ) as hash,
+            JSONExtract(_tx_result_meta_raw, 'Tuple(
+                result Tuple(
+                    transaction_hash String,
+                    result Tuple(
+                        fee_charged Int64,
+                        result String,
+                    )
+                ),
+                tx_apply_processing Tuple(
+                    v3 String,
+                    v4 String
+                )
+            )') as _tx_result_meta,
+
+            firstNonDefault(
+                _tx_result_meta.tx_apply_processing.v3,
+                _tx_result_meta.tx_apply_processing.v4
+            ) as _tx_meta_raw,
+
+            JSONExtract(_tx_meta_raw, 'Tuple(
+                soroban_meta Tuple(
+                    ext Tuple(
+                        v1 Tuple(
+                            total_non_refundable_resource_fee_charged Int64,
+                            total_refundable_resource_fee_charged Int64,
+                            rent_fee_charged Int64
+                        )
+                    )
+                )
+            )') as _tx_meta,
+
+            _tx_result_meta.result.transaction_hash as hash,
+            tx_order,
+            stellar_id(ledger_sequence::Int32, tx_order::Int32, 0::Int32) as id,
+
+            firstNonDefault(
+                JSONExtractString(_tx_result_meta.result.result.result, 'tx_fee_bump_inner_success', 'transaction_hash'),
+                JSONExtractString(_tx_result_meta.result.result.result, 'tx_fee_bump_inner_failed', 'transaction_hash')
+            ) as inner_transaction_hash,
+
+            JSONExtractKeysAndValues(_tx_result_meta.result.result.result, 'String')[1] as _result,
+
+            if(
+                JSONType(_tx_result_meta.result.result.result) = 'Object',
+                _result.1,
+                _tx_result_meta.result.result.result
+            ) as result_code,
+
+            (result_code in ('tx_fee_bump_inner_success', 'tx_success')) as successful,
+
+            _tx_result_meta.result.result.fee_charged as fee_charged,
+            _tx_meta.soroban_meta.ext.v1.total_non_refundable_resource_fee_charged as total_non_refundable_resource_fee_charged,
+            _tx_meta.soroban_meta.ext.v1.total_refundable_resource_fee_charged as total_refundable_resource_fee_charged,
+            _tx_meta.soroban_meta.ext.v1.rent_fee_charged as rent_fee_charged,
 
             _tx_envelope_inner.source_account as source_account,
             _tx_envelope_inner.seq_num as account_sequence,
             length(_tx_envelope_inner.operations) as operation_count,
+
+            if(
+                startsWith(source_account, 'M'),
+                stellar_unmux(source_account),
+                source_account
+            ) as account,
+
+            if(
+                startsWith(source_account, 'M'),
+                source_account,
+                ''
+            ) as account_muxed,
+
+            if(
+                startsWith(fee_source, 'M'),
+                stellar_unmux(fee_source),
+                fee_source
+            ) as fee_account,
+
+            if(
+                startsWith(fee_source, 'M'),
+                fee_source,
+                ''
+            ) as fee_account_muxed,
 
             multiIf(
                 JSONHas(_tx_envelope_inner.memo, 'text'), 'text',
@@ -166,112 +233,16 @@ with
             _tx_envelope_inner.ext.v1.resource_fee as resource_fee,
             _tx_envelope_inner.ext.v1.resources.instructions as soroban_resources_instructions,
             _tx_envelope_inner.ext.v1.resources.disk_read_bytes as soroban_resources_disk_read_bytes,
-            _tx_envelope_inner.ext.v1.resources.write_bytes as soroban_resources_write_bytes
-        from ledgers
-        array join
-            _tx_envelopes_raw as _tx_envelope_raw
-    ),
-
-    tx_result_metas as (
-        select
-            JSONExtract(_tx_result_meta_raw, 'Tuple(
-                result Tuple(
-                    transaction_hash String,
-                    result Tuple(
-                        fee_charged Int64,
-                        result String,
-                    )
-                ),
-                tx_apply_processing Tuple(
-                    v3 String,
-                    v4 String
-                )
-            )') as _tx_result_meta,
-
-            firstNonDefault(
-                _tx_result_meta.tx_apply_processing.v3,
-                _tx_result_meta.tx_apply_processing.v4
-            ) as _tx_meta_raw,
-
-            JSONExtract(_tx_meta_raw, 'Tuple(
-                soroban_meta Tuple(
-                    ext Tuple(
-                        v1 Tuple(
-                            total_non_refundable_resource_fee_charged Int64,
-                            total_refundable_resource_fee_charged Int64,
-                            rent_fee_charged Int64
-                        )
-                    )
-                )
-            )') as _tx_meta,
-
-            _tx_result_meta.result.transaction_hash as hash,
-            tx_order,
-
-            firstNonDefault(
-                JSONExtractString(_tx_result_meta.result.result.result, 'tx_fee_bump_inner_success', 'transaction_hash'),
-                JSONExtractString(_tx_result_meta.result.result.result, 'tx_fee_bump_inner_failed', 'transaction_hash')
-            ) as inner_transaction_hash,
-
-            JSONExtractKeysAndValues(_tx_result_meta.result.result.result, 'String')[1] as _result,
-
-            if(
-                JSONType(_tx_result_meta.result.result.result) = 'Object',
-                _result.1,
-                _tx_result_meta.result.result.result
-            ) as result_code,
-
-            (result_code in ('tx_fee_bump_inner_success', 'tx_success')) as successful,
-
-            _tx_result_meta.result.result.fee_charged as fee_charged,
-            _tx_meta.soroban_meta.ext.v1.total_non_refundable_resource_fee_charged as total_non_refundable_resource_fee_charged,
-            _tx_meta.soroban_meta.ext.v1.total_refundable_resource_fee_charged as total_refundable_resource_fee_charged,
-            _tx_meta.soroban_meta.ext.v1.rent_fee_charged as rent_fee_charged,
-
-            -- fail if you can't match tx_evelope with tx_meta (eg: hash with wrong network passphrase)
-            throwIf(result_code = '', 'tx_match_failed') as _
-        from ledgers
-        array join
-            _tx_result_metas_raw as _tx_result_meta_raw,
-            arrayEnumerate(_tx_result_metas_raw) as tx_order
-    ),
-
-    txs as (
-        select
-            columns('^[^_]'),
-            stellar_id(ledger_sequence::Int32, tx_order::Int32, 0::Int32) as id,
-
-            if(
-                startsWith(source_account, 'M'),
-                stellar_unmux(source_account),
-                source_account
-            ) as account,
-
-            if(
-                startsWith(source_account, 'M'),
-                source_account,
-                ''
-            ) as account_muxed,
-
-            if(
-                startsWith(fee_source, 'M'),
-                stellar_unmux(fee_source),
-                fee_source
-            ) as fee_account,
-
-            if(
-                startsWith(fee_source, 'M'),
-                fee_source,
-                ''
-            ) as fee_account_muxed,
+            _tx_envelope_inner.ext.v1.resources.write_bytes as soroban_resources_write_bytes,
 
             total_non_refundable_resource_fee_charged + total_refundable_resource_fee_charged as resource_fee_charged,
             max_fee - resource_fee as inclusion_fee,
             fee_charged - resource_fee_charged as inclusion_fee_charged
-        from tx_envelopes
-        left join tx_result_metas
-        on tx_envelopes.hash = tx_result_metas.hash
-        order by id
+        from ledgers
+        array join
+            _tx_envelopes_raw as _tx_envelope_raw,
+            _tx_result_metas_raw as _tx_result_meta_raw,
+            arrayEnumerate(_tx_result_metas_raw) as tx_order
     )
 
 select

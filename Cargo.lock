@@ -1412,7 +1412,7 @@ dependencies = [
 [[package]]
 name = "ch-udf-common"
 version = "0.0.1"
-source = "git+https://github.com/agnosticeng/ch-udf-common.git?branch=main#9df14bee60afb494b26859d01f631dc105fe6373"
+source = "git+https://github.com/agnosticeng/ch-udf-common.git?branch=main#b23f9322573b37e570c7768e98c5760be24c9bd5"
 dependencies = [
  "alloy",
  "alloy-json-rpc",
@@ -1454,6 +1454,7 @@ dependencies = [
  "object_store",
  "querystring",
  "regex",
+ "serde",
  "serde_json",
  "sha2",
  "stellar-strkey 0.0.14",

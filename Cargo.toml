@@ -35,3 +35,4 @@ stellar-strkey = { version = "0.0.14", features = ["cli"] }
 ch-udf-common = { git = "https://github.com/agnosticeng/ch-udf-common.git", branch = "main" }
 farmhash = "1"
 regex = "1.12.2"
+serde = "1.0.228"

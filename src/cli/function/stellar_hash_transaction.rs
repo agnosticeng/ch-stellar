@@ -1,4 +1,3 @@
-use crate::stellar::hash_transaction_envelope;
 use anyhow::{Context, Result};
 use arrow::array::{BinaryArray, GenericByteBuilder, RecordBatch};
 use arrow::datatypes::{BinaryType, DataType, Field, Schema};
@@ -6,8 +5,8 @@ use arrow_ipc::reader::StreamReader;
 use arrow_ipc::writer::StreamWriter;
 use ch_udf_common::arrow::RecordBatchExt;
 use clap::Args;
-use core::str;
 use itertools::izip;
+use sha2::{Digest, Sha256};
 use std::io::{stdin, stdout};
 use std::sync::Arc;
 use stellar_xdr::curr::TransactionEnvelope;
@@ -43,10 +42,9 @@ impl StellarHashTransactionCommand {
                         let envelope: TransactionEnvelope =
                             serde_json::from_slice(data.unwrap())
                                 .context("failed to deserialize transaction envelope")?;
-                        let hash = hash_transaction_envelope(
-                            envelope,
-                            str::from_utf8(passphrase.unwrap())?,
-                        )?;
+                        let network_id: [u8; 32] =
+                            Sha256::digest(passphrase.as_ref().unwrap()).into();
+                        let hash = envelope.hash(network_id)?;
                         Ok(hex::encode(hash))
                     });
 

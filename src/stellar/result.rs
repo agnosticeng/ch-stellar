@@ -21,4 +21,6 @@ pub enum StellarError {
     EmptyNetworkPassphrase,
     #[error("wrong galexie filename {0}")]
     WrongGalexieFilename(String),
+    #[error("unmatched tx envelope")]
+    UnmatchedTxEnvelope,
 }

@@ -1,16 +1,16 @@
-mod table_function;
 mod function;
+mod table_function;
 
-use clap::{Subcommand,Parser};
-use anyhow::Result;
-use tokio::runtime::Builder;
-use crate::cli::table_function::TableFunction;
 use crate::cli::function::Function;
+use crate::cli::table_function::TableFunction;
+use anyhow::Result;
+use clap::{Parser, Subcommand};
+use tokio::runtime::Builder;
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
     TableFunction(TableFunction),
-    Function(Function)
+    Function(Function),
 }
 
 #[derive(Parser)]
@@ -28,7 +28,7 @@ impl CLI {
             .block_on(async {
                 match &self.cmd {
                     Command::TableFunction(cmd) => cmd.run().await,
-                    Command::Function(cmd) => cmd.run().await
+                    Command::Function(cmd) => cmd.run().await,
                 }
             })
     }

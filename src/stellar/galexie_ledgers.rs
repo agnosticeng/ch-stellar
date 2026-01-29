@@ -24,11 +24,11 @@ pub fn galexie_ledgers<'a>(
     base_url: &str,
     start: Option<u32>,
     end: Option<u32>,
-) -> Result<impl Stream<Item = Result<Box<LedgerCloseMeta>>> + 'a> {
+) -> Result<impl Stream<Item = Result<Box<LedgerCloseMeta>>> + 'a + use<'a>> {
     let mut u = Url::parse(base_url)?;
     let opts = itertools::concat([
         opts_from_env(),
-        opts_from_query_string(u.fragment().unwrap_or("")),
+        opts_from_query_string(&u.fragment().unwrap_or("")),
     ]);
     u.set_fragment(None);
     let u = Arc::new(u);
@@ -78,10 +78,11 @@ async fn decompress_file(data: Bytes) -> Result<Vec<u8>> {
 
 async fn decode_xdr(data: Vec<u8>) -> Result<Vec<Box<LedgerCloseMeta>>> {
     let mut xdr_reader = Limited::new(data.reader(), Limits::depth(DEFAULT_XDR_RW_DEPTH_LIMIT));
-    Type::read_xdr_iter(TypeVariant::LedgerCloseMeta, &mut xdr_reader)
+    let res = Type::read_xdr_iter(TypeVariant::LedgerCloseMeta, &mut xdr_reader)
         .map_ok(decode_ledger_close_meta)
         .flatten()
-        .collect::<Result<Vec<Box<LedgerCloseMeta>>>>()
+        .collect::<Result<Vec<Box<LedgerCloseMeta>>>>();
+    res
 }
 
 fn decode_ledger_close_meta(t: Type) -> Result<Box<LedgerCloseMeta>> {
