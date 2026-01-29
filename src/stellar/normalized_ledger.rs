@@ -33,8 +33,8 @@ impl NormalizedLedger {
                 NormalizedLedger {
                     ext: LedgerCloseMetaExt::default(),
                     ledger_header: lcmv0.ledger_header,
-                    tx_set: tx_set,
-                    tx_processing: tx_processing,
+                    tx_set,
+                    tx_processing,
                     upgrades_processing: lcmv0.upgrades_processing,
                     scp_info: lcmv0.scp_info,
                     total_byte_size_of_live_soroban_state: 0,
@@ -59,8 +59,8 @@ impl NormalizedLedger {
                 NormalizedLedger {
                     ext: lcmv1.ext,
                     ledger_header: lcmv1.ledger_header,
-                    tx_set: tx_set,
-                    tx_processing: tx_processing,
+                    tx_set,
+                    tx_processing,
                     upgrades_processing: lcmv1.upgrades_processing,
                     scp_info: lcmv1.scp_info,
                     total_byte_size_of_live_soroban_state: lcmv1
@@ -78,7 +78,7 @@ impl NormalizedLedger {
                 NormalizedLedger {
                     ext: lcmv2.ext,
                     ledger_header: lcmv2.ledger_header,
-                    tx_set: tx_set,
+                    tx_set,
                     tx_processing: lcmv2.tx_processing,
                     upgrades_processing: lcmv2.upgrades_processing,
                     scp_info: lcmv2.scp_info,
@@ -184,8 +184,7 @@ fn transform_generalized_transaction_set(
 
     Ok(txss
         .into_iter()
-        .map(|v| v.into_vec())
-        .flatten()
+        .flat_map(|v| v.into_vec())
         .map(|e: TransactionEnvelope| {
             let h = e.hash(network_id)?;
             let i = hash_to_index
