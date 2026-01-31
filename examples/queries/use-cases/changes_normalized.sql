@@ -42,7 +42,6 @@ with
         select
             columns('^[^_]'),
 
-
             JSONExtract(_tx_envelope_raw, 'Tuple(
                 tx Tuple(
                     tx String

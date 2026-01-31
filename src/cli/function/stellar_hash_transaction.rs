@@ -23,7 +23,7 @@ impl StellarHashTransactionCommand {
         )]));
 
         loop {
-            let reader = StreamReader::try_new_buffered(stdin(), None)?;
+            let reader = StreamReader::try_new(stdin(), None)?;
             let mut writer = StreamWriter::try_new_buffered(stdout(), &output_schema)?;
 
             for input_batch in reader {
