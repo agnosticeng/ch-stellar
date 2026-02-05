@@ -45,7 +45,7 @@ with
             _ledger.tx_set as _tx_envelopes_raw,
             _ledger.tx_processing as _tx_result_metas_raw
         from galexie
-    ),
+    )
 
     txs as (
         select

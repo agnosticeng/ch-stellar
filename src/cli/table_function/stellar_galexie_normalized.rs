@@ -74,29 +74,34 @@ impl StellarGalexieNormalizedCommand {
             })
             .try_flatten()
             .try_flatten()
-            .chunks(self.output_block_size.unwrap_or(32));
+            .chunks(self.output_block_size.unwrap_or(8))
+            .map(
+                |batch| -> Result<arrow::array::RecordBatch, anyhow::Error> {
+                    let mut result_col_builder: GenericByteBuilder<
+                        arrow::datatypes::GenericBinaryType<i32>,
+                    > = GenericByteBuilder::<BinaryType>::new();
+
+                    for item in batch {
+                        let (network_id, lcm) = item?;
+                        result_col_builder.append_value(serde_json::to_vec(
+                            &NormalizedLedger::try_from_ledger_close_meta(lcm, network_id)?,
+                        )?);
+                    }
+
+                    let result_col = result_col_builder.finish();
+
+                    Ok(RecordBatch::try_new(
+                        output_schema.clone(),
+                        vec![Arc::new(result_col)],
+                    )?)
+                },
+            );
 
         pin_mut!(s);
 
         while let Some(batch) = s.next().await {
-            let mut result_col_builder: GenericByteBuilder<
-                arrow::datatypes::GenericBinaryType<i32>,
-            > = GenericByteBuilder::<BinaryType>::new();
-
-            for item in batch {
-                let (network_id, lcm) = item?;
-                result_col_builder.append_value(serde_json::to_vec(
-                    &NormalizedLedger::try_from_ledger_close_meta(*lcm, network_id)?,
-                )?);
-            }
-
-            let result_col = result_col_builder.finish();
-
-            let output_batch =
-                RecordBatch::try_new(output_schema.clone(), vec![Arc::new(result_col)])?;
-
             writer
-                .write(&output_batch)
+                .write(&batch?)
                 .context("failed to write output batch")?;
 
             writer.flush().context("failed to flush output stream")?;

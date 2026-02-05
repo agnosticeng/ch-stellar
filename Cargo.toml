@@ -26,8 +26,8 @@ thiserror = "2"
 mimalloc = "0.1.47"
 bytes = "1.10.1"
 stellar-xdr = { version = "25", features = ["curr", "base64", "hex", "serde", "serde_json", "std"] }
-zstd = "0.13"
-stream-flatten-iters = "0.2"
+async-compression = { version = "0.4", features = ["tokio", "zstd"] }
+tokio-util = { version = "0.7", features = ["io", "io-util"] }
 querystring = "1"
 sha2 = "0.10"
 hex = "0.4"
@@ -36,3 +36,4 @@ ch-udf-common = { git = "https://github.com/agnosticeng/ch-udf-common.git", bran
 farmhash = "1"
 regex = "1.12.2"
 serde = "1.0.228"
+tokio-stream = { version = "0.1.18", features = ["sync"] }
