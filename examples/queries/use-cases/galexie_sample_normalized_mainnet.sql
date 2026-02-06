@@ -9,7 +9,7 @@ from executable(
         select
             *
         from values(
-            'url String, start UInt32, end UInt32, passphrase String',
+            'url String, start UInt32, end UInt32',
             (
                 'https://galexie.lightsail.network/v1/',
                 33028304,

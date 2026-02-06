@@ -74,3 +74,51 @@ docker compose up -d
 ```
 
 This launches a ClickHouse server inside a Docker container using the configuration and UDFs from the bundle.
+
+## Testing
+
+### Integration Tests
+
+UDFs are tested end-to-end by running SQL queries through `clickhouse local` with the compiled binary and UDF configs loaded, then comparing the actual output against expected `.tsv` snapshots.
+
+The test runner (`tests/integration.rs`) uses [rstest](https://github.com/la10736/rstest)'s `#[files]` attribute to automatically discover every `.sql` file under `tests/sql/` (including subdirectories) and create one test case per file. Each test:
+
+1. Executes the `.sql` file with `clickhouse local`, pointing it at the bundle in `tmp/bundle/`
+2. Asserts that the query succeeds (non-zero exit code = immediate failure with stderr shown)
+3. Compares stdout against the sibling `.tsv` file (e.g. `stellar_id.sql` → `stellar_id.tsv`)
+4. On mismatch, prints a line-by-line diff
+
+#### Prerequisites
+
+- The bundle must be built first: `make build && make bundle`
+- `clickhouse` must be available in `PATH` (override with `CLICKHOUSE_BIN=/path/to/clickhouse`)
+
+#### Running the test suite
+
+```sh
+cargo test --test integration
+```
+
+Filter to specific tests:
+
+```sh
+cargo test --test integration stellar_id
+```
+
+#### Adding a new test
+
+1. Create a `.sql` file in `tests/sql/` (subdirectories are supported for organization)
+2. Generate the expected output snapshot:
+    ```sh
+    clickhouse local \
+        --log-level=debug \
+        -- \
+        --user_scripts_path="./tmp/bundle/var/lib/clickhouse/user_scripts" \
+        --user_defined_executable_functions_config="./tmp/bundle/etc/clickhouse-server/*_function.*ml" \
+        --user_defined_path="./tmp/bundle/var/lib/clickhouse/user_defined" \
+        < tests/sql/my_test.sql \
+        > tests/sql/my_test.tsv
+        
+    ```
+3. Commit both the `.sql` and `.tsv` files
+4. Verify with `cargo test --test integration`
