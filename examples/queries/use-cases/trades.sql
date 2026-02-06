@@ -1,14 +1,14 @@
-with 
+with
     galexie as (
         select * from file('./tmp/galexie_sample_mainnet.bin', 'Native')
     ),
 
     ledgers as (
-        select            
+        select
             firstNonDefault(
-                JSONExtractString(ledger_close_meta, 'v0'),
-                JSONExtractString(ledger_close_meta, 'v1'),
-                JSONExtractString(ledger_close_meta, 'v2')
+                JSONExtractString(ledger, 'v0'),
+                JSONExtractString(ledger, 'v1'),
+                JSONExtractString(ledger, 'v2')
             ) as _lcm_raw,
 
             JSONExtract(_lcm_raw, ' Tuple(
@@ -42,7 +42,7 @@ with
             _lcm.ledger_header.header.ledger_seq as ledger_sequence,
             _lcm.ledger_header.header.scp_value.close_time as ledger_close_time,
             _lcm.ledger_header.hash as ledger_hash,
-            
+
             arrayConcat(
                 _lcm.tx_set.txs,
                 arrayFlatten(_lcm.tx_set.v1.phases.v0.txset_comp_txs_maybe_discounted_fee.txs),
@@ -52,7 +52,7 @@ with
             _lcm.tx_processing as _tx_result_metas_raw
 
         from galexie
-    ),  
+    ),
 
     tx_envelopes as (
         select
@@ -86,13 +86,13 @@ with
             stellar_hash_transaction(_tx_envelope_raw,  'Public Global Stellar Network ; September 2015') as transaction_hash,
 
             _tx_envelope_inner.operations as _ops_raw
-        from ledgers 
-        array join 
+        from ledgers
+        array join
             _tx_envelopes_raw as _tx_envelope_raw
     ),
 
     tx_result_metas as (
-        select             
+        select
             JSONExtract(_tx_result_meta_raw, 'Tuple(
                 result Tuple(
                     transaction_hash String,
@@ -133,7 +133,7 @@ with
                 operations Array(String)
             )') as _tx_meta,
 
-            firstNonDefault(    
+            firstNonDefault(
                 _tx_result_meta.tx_apply_processing.operations,
                 _tx_meta.operations
             ) as _ops_metas_raw,
@@ -141,20 +141,20 @@ with
             _tx_order,
 
             if(
-                JSONType(_tx_result_meta.result.result.result) = 'Object', 
-                _result.1, 
+                JSONType(_tx_result_meta.result.result.result) = 'Object',
+                _result.1,
                 _tx_result_meta.result.result.result
             ) as _transaction_result_code,
 
             (_transaction_result_code in ('tx_fee_bump_inner_success', 'tx_success')) as _transaction_successful
-        from ledgers 
-        array join 
+        from ledgers
+        array join
             _tx_result_metas_raw as _tx_result_meta_raw,
             arrayEnumerate(_tx_result_metas_raw) as _tx_order
     ),
 
     txs as (
-        select 
+        select
             columns('^[^_]'),
             stellar_id(ledger_sequence::Int32, _tx_order::Int32, 0::Int32) as transaction_id,
             _transaction_result_code,
@@ -169,7 +169,7 @@ with
     ),
 
     ops as (
-        select 
+        select
             columns('^[^_]'),
 
             JSONExtractString(_op_raw, 'source_account') as _source_account,
@@ -184,8 +184,8 @@ with
             _body_inner.2 as _body,
 
             if(
-                JSONType(_op_result_raw) = 'Object', 
-                _op_result.1, 
+                JSONType(_op_result_raw) = 'Object',
+                _op_result.1,
                 JSONExtractString(_op_result_raw)
             ) as _result_code,
 
@@ -199,7 +199,7 @@ with
 
             JSONExtractRaw(_result_body, 'offer') as _offer_raw,
             JSONExtractKeysAndValues(_offer_raw, 'String')[1] as _offer_raw_inner,
-            
+
             if (
                 JSONType(_offer_raw) = 'Object',
                 _offer_raw_inner.1,
@@ -214,7 +214,7 @@ with
                 JSONExtractArrayRaw(_result_body, 'offers_claimed')
             ) as _offers_claimed_raw
         from txs
-        array join 
+        array join
             _ops_raw as _op_raw,
             _ops_results_raw as _op_result_raw,
             _ops_metas_raw as _op_meta_raw,
@@ -222,16 +222,16 @@ with
         where _transaction_successful = 1
         and _inner_result_code = 'success'
         and operation_type in (
-            'path_payment_strict_receive', 
-            'manage_sell_offer', 
-            'create_passive_sell_offer', 
-            'manage_buy_offer', 
+            'path_payment_strict_receive',
+            'manage_sell_offer',
+            'create_passive_sell_offer',
+            'manage_buy_offer',
             'path_payment_strict_send'
         )
     ),
 
     trades as (
-        select 
+        select
             columns('^[^_]'),
             JSONExtractKeysAndValues(_offer_claimed_raw, 'String')[1] as _offer_claimed_raw_inner,
             _offer_claimed_raw_inner.1 as _offer_claimed_type,
@@ -265,7 +265,7 @@ with
             JSONExtractString(_asset_type_and_data_bought.2, 'issuer') as buying_asset_issuer,
             stellar_asset_id(buying_asset_code, buying_asset_issuer, buying_asset_type) as buying_asset_id,
             JSONExtractInt(_offer_claimed_body_raw, 'amount_bought') as buying_amount,
-            
+
             JSONExtractString(_offer_claimed_body_raw, 'seller_id') as seller_id,
             JSONExtractString(_offer_claimed_body_raw, 'offer_id') as selling_offer_id,
             JSONExtractString(_offer_claimed_body_raw, 'liquidity_pool_id') as liquidity_pool_id,
@@ -281,17 +281,17 @@ with
             JSONExtractInt(_last_pool_change, 'body', 'liquidity_pool_constant_product', 'params', 'fee') as liquidity_pool_fee,
             JSONExtractString(_offer_body_raw, 'offer_id') as buying_offer_id
         from ops
-        array join 
+        array join
             _offers_claimed_raw as _offer_claimed_raw,
             arrayEnumerate(_offers_claimed_raw) as order
     )
 
-select 
+select
     columns('^[^_]')
-from trades 
+from trades
 
 format Vertical
-settings 
+settings
     output_format_arrow_string_as_string=0,
     enable_unaligned_array_join = 1,
     enable_named_columns_in_function_tuple=1

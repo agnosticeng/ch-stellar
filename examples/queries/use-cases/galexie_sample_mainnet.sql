@@ -1,47 +1,47 @@
 insert into function file('./tmp/galexie_sample_mainnet.bin', 'Native')
 select
-    ledger_close_meta
+    ledger
 from executable(
     'ch-stellar table-function galexie',
     ArrowStream,
-    'ledger_close_meta String',
+    'ledger String',
     (
         select
             *
         from values(
             'url String, start UInt32, end UInt32',
             (
-                'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
+                'https://galexie.lightsail.network/v1/',
                 33028304,
                 33028314
             ),
             (
-                'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
+                'https://galexie.lightsail.network/v1/',
                 34000000,
                 34000010
             ),
             (
-                'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
+                'https://galexie.lightsail.network/v1/',
                 54000000,
                 54000010
             ),
             (
-                'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
+            'https://galexie.lightsail.network/v1/',
                 50461314,
                 50461324
             ),
             (
-                'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
+                'https://galexie.lightsail.network/v1/',
                 50461745,
                 50461755
             ),
             (
-                'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
+                'https://galexie.lightsail.network/v1/',
                 50560940,
                 50560950
             ),
             (
-                'https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst',
+                'https://galexie.lightsail.network/v1/',
                 58000000,
                 58000010
             )

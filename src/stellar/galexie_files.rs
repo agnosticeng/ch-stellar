@@ -1,45 +1,39 @@
+use super::galexie_config::GalexieConfig;
+
 pub struct GalexieFiles {
-    ledgers_per_file: u32,
-    files_per_partition: u32,
-    extension: String,
+    conf: GalexieConfig,
     next_start: u32,
     end: Option<u32>,
 }
 
 impl GalexieFiles {
-    pub fn new(
-        ledgers_per_file: u32,
-        files_per_partition: u32,
-        extension: Option<String>,
-        start: Option<u32>,
-        end: Option<u32>,
-    ) -> Self {
+    pub fn new(conf: GalexieConfig, start: Option<u32>, end: Option<u32>) -> Self {
         let start = start.unwrap_or(0);
 
         GalexieFiles {
-            ledgers_per_file,
-            files_per_partition,
-            extension: extension.unwrap_or("xdr.zstd".to_string()),
-            next_start: (start / ledgers_per_file) * ledgers_per_file,
+            next_start: (start / conf.ledgers_per_batch) * conf.ledgers_per_batch,
             end,
+            conf,
         }
     }
 
     pub fn file_for_ledger(&self, ledger: u32) -> String {
-        let ledgers_per_partition = self.ledgers_per_file * self.files_per_partition;
+        let ledgers_per_partition = self.conf.ledgers_per_batch * self.conf.batches_per_partition;
         let partition_start = (ledger / ledgers_per_partition) * ledgers_per_partition;
         let partition_end = partition_start + ledgers_per_partition - 1;
-        let file_start = (ledger / self.ledgers_per_file) * self.ledgers_per_file;
-        let file_end = file_start + self.ledgers_per_file - 1;
+        let file_start = (ledger / self.conf.ledgers_per_batch) * self.conf.ledgers_per_batch;
+        let file_end = file_start + self.conf.ledgers_per_batch - 1;
+        let extension = self.conf.compression.extension();
+
         format!(
-            "{:X}--{:?}-{:?}/{:X}--{:?}-{:?}.{}",
+            "{:X}--{:?}-{:?}/{:X}--{:?}-{:?}.xdr{}",
             u32::MAX - partition_start,
             partition_start,
             partition_end,
             u32::MAX - file_start,
             file_start,
             file_end,
-            self.extension
+            extension
         )
     }
 }
@@ -53,7 +47,7 @@ impl Iterator for GalexieFiles {
         }
 
         let res = self.next_start;
-        self.next_start += self.ledgers_per_file;
+        self.next_start += self.conf.ledgers_per_batch;
         Some(self.file_for_ledger(res))
     }
 }

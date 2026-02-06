@@ -1,14 +1,14 @@
-with 
+with
     galexie as (
         select * from file('./tmp/galexie_sample_mainnet.bin', 'Native')
     ),
 
     ledgers as (
-        select            
+        select
             firstNonDefault(
-                JSONExtractString(ledger_close_meta, 'v0'),
-                JSONExtractString(ledger_close_meta, 'v1'),
-                JSONExtractString(ledger_close_meta, 'v2')
+                JSONExtractString(ledger, 'v0'),
+                JSONExtractString(ledger, 'v1'),
+                JSONExtractString(ledger, 'v2')
             ) as _lcm_raw,
 
             JSONExtract(_lcm_raw, ' Tuple(
@@ -45,7 +45,7 @@ with
             _lcm.ledger_header.header.ledger_seq as ledger_sequence,
             _lcm.ledger_header.header.scp_value.close_time as ledger_close_time,
             _lcm.ledger_header.hash as ledger_hash,
-            
+
             arrayConcat(
                 _lcm.tx_set.txs,
                 arrayFlatten(_lcm.tx_set.v1.phases.v0.txset_comp_txs_maybe_discounted_fee.txs),
@@ -62,7 +62,7 @@ with
             ) as _upgrade_processing_changes_raw
 
         from galexie
-    ), 
+    ),
 
     tx_envelopes as (
         select
@@ -94,18 +94,18 @@ with
             ) _tx_envelope_inner,
 
             stellar_hash_transaction(
-                _tx_envelope_raw, 
+                _tx_envelope_raw,
                 'Public Global Stellar Network ; September 2015'
             ) as transaction_hash,
 
             _tx_envelope_inner.operations as _ops_raw
-        from ledgers 
-        array join 
+        from ledgers
+        array join
             _tx_envelopes_raw as _tx_envelope_raw
     ),
 
     tx_result_metas as (
-        select             
+        select
             JSONExtract(_tx_result_meta_raw, 'Tuple(
                 result Tuple(
                     transaction_hash String,
@@ -146,11 +146,11 @@ with
                 operations Array(String)
             )') as _tx_meta,
 
-            firstNonDefault(    
+            firstNonDefault(
                 _tx_result_meta.tx_apply_processing.operations,
                 _tx_meta.operations
             ) as _ops_metas_raw,
-        
+
             _tx_result_meta.fee_processing as _fee_processing_changes_raw,
             _tx_result_meta.post_tx_apply_fee_processing as _post_tx_apply_fee_processing_raw,
             _tx_meta.tx_changes as _tx_changes_raw,
@@ -159,20 +159,20 @@ with
             _tx_order,
 
             if(
-                JSONType(_tx_result_meta.result.result.result) = 'Object', 
-                _result.1, 
+                JSONType(_tx_result_meta.result.result.result) = 'Object',
+                _result.1,
                 _tx_result_meta.result.result.result
             ) as transaction_result_code,
 
             (transaction_result_code in ('tx_fee_bump_inner_success', 'tx_success')) as transaction_successful
-        from ledgers 
-        array join 
+        from ledgers
+        array join
             _tx_result_metas_raw as _tx_result_meta_raw,
             arrayEnumerate(_tx_result_metas_raw) as _tx_order
     ),
 
     txs as (
-        select 
+        select
             columns('^[^_]'),
             stellar_id(ledger_sequence::Int32, _tx_order::Int32, 0::Int32) as transaction_id,
             _ops_raw,
@@ -193,7 +193,7 @@ with
     ),
 
     ops as (
-        select 
+        select
             columns('^[^_]'),
             stellar_id(ledger_sequence::Int32, _tx_order::Int32, _op_order::Int32) as operation_id,
 
@@ -203,8 +203,8 @@ with
             JSONExtractArrayRaw(_op_meta_raw, 'changes') as _op_changes,
 
             if(
-                JSONType(_op_result_raw) = 'Object', 
-                _op_result.1, 
+                JSONType(_op_result_raw) = 'Object',
+                _op_result.1,
                 JSONExtractString(_op_result_raw)
             ) as operation_result_code,
 
@@ -214,7 +214,7 @@ with
                 _op_result_tr.2
             ) as operation_inner_result_code
         from txs
-        array join 
+        array join
             _ops_raw as _op_raw,
             _ops_results_raw as _op_result_raw,
             _ops_metas_raw as _op_meta_raw,
@@ -222,7 +222,7 @@ with
     ),
 
     upgrade_processing_changes as (
-        select 
+        select
             ledger_sequence,
             ledger_close_time,
             ledger_hash,
@@ -240,7 +240,7 @@ with
     ),
 
     fee_processing_changes as (
-        select 
+        select
             ledger_sequence,
             ledger_close_time,
             ledger_hash,
@@ -258,7 +258,7 @@ with
     ),
 
     post_tx_apply_fee_processing_changes as (
-        select 
+        select
             ledger_sequence,
             ledger_close_time,
             ledger_hash,
@@ -276,7 +276,7 @@ with
     ),
 
     tx_changes as (
-        select 
+        select
             ledger_sequence,
             ledger_close_time,
             ledger_hash,
@@ -294,7 +294,7 @@ with
     ),
 
     tx_changes_before as (
-        select 
+        select
             ledger_sequence,
             ledger_close_time,
             ledger_hash,
@@ -312,7 +312,7 @@ with
     ),
 
     tx_changes_after as (
-        select 
+        select
             ledger_sequence,
             ledger_close_time,
             ledger_hash,
@@ -330,7 +330,7 @@ with
     ),
 
     ops_changes as (
-        select 
+        select
             ledger_sequence,
             ledger_close_time,
             ledger_hash,
@@ -348,10 +348,10 @@ with
     ),
 
     changes as (
-        select 
+        select
             columns('^[^_]'),
             JSONExtractKeysAndValues(_change_raw, 'String')[1] as _ledger_entry_change,
-            
+
             JSONExtract(_ledger_entry_change.2, 'Tuple(
                 last_modified_ledger_seq UInt32,
                 data String,
@@ -370,17 +370,17 @@ with
             _ledger_entry_data.2 as ledger_entry_data
         from (
             select * from upgrade_processing_changes
-            union all 
+            union all
             select * from fee_processing_changes
-            union all 
+            union all
             select * from post_tx_apply_fee_processing_changes
-            union all 
+            union all
             select * from tx_changes
             union all
             select * from tx_changes_before
-            union all 
+            union all
             select * from tx_changes_after
-            union all 
+            union all
             select * from ops_changes
         )
     )
@@ -391,7 +391,7 @@ from changes
 limit 100
 
 format Vertical
-settings 
+settings
     output_format_arrow_string_as_string=0,
     enable_unaligned_array_join = 1,
     enable_named_columns_in_function_tuple=1

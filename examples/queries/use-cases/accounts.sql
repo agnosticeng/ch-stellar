@@ -1,6 +1,6 @@
-with 
+with
     accounts as (
-        select             
+        select
             JSONExtract(ledger_entry_data, 'Tuple(
                 account_id String,
                 balance UInt64,
@@ -66,12 +66,12 @@ with
         where ledger_entry_type = 'account'
     )
 
-select 
+select
     columns('^[^_]')
 from accounts
 
 format Vertical
-settings 
+settings
     output_format_arrow_string_as_string=0,
     enable_unaligned_array_join = 1,
     enable_named_columns_in_function_tuple=1

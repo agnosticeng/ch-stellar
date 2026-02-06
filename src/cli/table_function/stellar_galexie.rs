@@ -1,4 +1,4 @@
-use crate::stellar::galexie_ledgers;
+use crate::stellar::{GalexieCache, NormalizedLedger};
 use anyhow::{Context, Result};
 use arrow::array::{BinaryArray, GenericByteBuilder, RecordBatch, UInt32Array};
 use arrow::datatypes::{BinaryType, DataType, Field, Schema};
@@ -10,6 +10,7 @@ use clap::Args;
 use futures::{StreamExt, pin_mut};
 use futures::{TryStreamExt, stream};
 use itertools::izip;
+use sha2::{Digest, Sha256};
 use std::io::{BufReader, BufWriter};
 use std::sync::Arc;
 
@@ -21,12 +22,14 @@ pub struct StellarGalexieCommand {
     output_file: Option<String>,
     #[arg(long)]
     output_block_size: Option<usize>,
+    #[arg(long)]
+    normalized: bool,
 }
 
 impl StellarGalexieCommand {
     pub async fn run(&self) -> Result<()> {
         let output_schema = Arc::new(Schema::new(vec![Field::new(
-            "ledger_close_meta",
+            "ledger",
             DataType::Binary,
             false,
         )]));
@@ -39,42 +42,67 @@ impl StellarGalexieCommand {
             &output_schema,
         )?;
 
+        let cache = GalexieCache::default();
+
         let s = stream::iter(reader)
             .err_into::<anyhow::Error>()
-            .and_then(|input_batch| async move {
-                let url_col: &BinaryArray = input_batch.get_column("url")?;
-                let start_col: &UInt32Array = input_batch.get_column("start")?;
-                let end_col: &UInt32Array = input_batch.get_column("end")?;
+            .and_then(|input_batch| {
+                let cache = cache.clone();
+                async move {
+                    let url_col: &BinaryArray = input_batch.get_column("url")?;
+                    let start_col: &UInt32Array = input_batch.get_column("start")?;
+                    let end_col: &UInt32Array = input_batch.get_column("end")?;
 
-                let data = izip!(url_col, start_col, end_col)
-                    .map(|(url, start, end)| {
-                        Ok::<_, anyhow::Error>((
-                            url.ok_or(anyhow::anyhow!("no URL"))
-                                .and_then(|x| Ok(String::from_utf8(x.to_vec())?))?,
-                            start,
-                            end,
-                        ))
-                    })
-                    .collect::<Result<Vec<_>>>()?;
+                    let data = izip!(url_col, start_col, end_col)
+                        .map(|(url, start, end)| {
+                            Ok::<_, anyhow::Error>((
+                                url.ok_or(anyhow::anyhow!("no URL"))
+                                    .and_then(|x| Ok(String::from_utf8(x.to_vec())?))?,
+                                start,
+                                end,
+                            ))
+                        })
+                        .collect::<Result<Vec<_>>>()?;
 
-                let s = stream::iter(data).map(move |(url, start, end)| {
-                    Ok::<_, anyhow::Error>(
-                        galexie_ledgers(&url, start, end)?.err_into::<anyhow::Error>(),
-                    )
-                });
-                Ok(s)
+                    let s = stream::iter(data).then({
+                        move |(url, start, end)| {
+                            let cache = cache.clone();
+                            async move {
+                                let galexie = cache.get_or_create(&url).await?;
+                                let network_id: [u8; 32] =
+                                    Sha256::digest(galexie.network_passphrase()).into();
+
+                                Ok::<_, anyhow::Error>(
+                                    galexie
+                                        .ledgers(start, end)?
+                                        .err_into::<anyhow::Error>()
+                                        .map_ok(move |lcm| (network_id, lcm)),
+                                )
+                            }
+                        }
+                    });
+                    Ok(s)
+                }
             })
             .try_flatten()
             .try_flatten()
-            .chunks(self.output_block_size.unwrap_or(32))
+            .chunks(self.output_block_size.unwrap_or(8))
             .map(
                 |batch| -> Result<arrow::array::RecordBatch, anyhow::Error> {
                     let mut result_col_builder: GenericByteBuilder<
                         arrow::datatypes::GenericBinaryType<i32>,
                     > = GenericByteBuilder::<BinaryType>::new();
 
-                    for lcm in batch {
-                        result_col_builder.append_value(serde_json::to_vec(&lcm?)?);
+                    for item in batch {
+                        let (network_id, lcm) = item?;
+
+                        if self.normalized {
+                            result_col_builder.append_value(serde_json::to_vec(
+                                &NormalizedLedger::try_from_ledger_close_meta(lcm, network_id)?,
+                            )?);
+                        } else {
+                            result_col_builder.append_value(serde_json::to_vec(&lcm)?);
+                        }
                     }
 
                     let result_col = result_col_builder.finish();

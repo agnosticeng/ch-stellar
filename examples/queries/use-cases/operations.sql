@@ -1,14 +1,14 @@
-with 
+with
     galexie as (
         select * from file('./tmp/galexie_sample_mainnet.bin', 'Native')
     ),
 
     ledgers as (
-        select            
+        select
             firstNonDefault(
-                JSONExtractString(ledger_close_meta, 'v0'),
-                JSONExtractString(ledger_close_meta, 'v1'),
-                JSONExtractString(ledger_close_meta, 'v2')
+                JSONExtractString(ledger, 'v0'),
+                JSONExtractString(ledger, 'v1'),
+                JSONExtractString(ledger, 'v2')
             ) as _lcm_raw,
 
             JSONExtract(_lcm_raw, ' Tuple(
@@ -42,7 +42,7 @@ with
             _lcm.ledger_header.header.ledger_seq as ledger_sequence,
             _lcm.ledger_header.header.scp_value.close_time as ledger_close_time,
             _lcm.ledger_header.hash as ledger_hash,
-            
+
             arrayConcat(
                 _lcm.tx_set.txs,
                 arrayFlatten(_lcm.tx_set.v1.phases.v0.txset_comp_txs_maybe_discounted_fee.txs),
@@ -52,7 +52,7 @@ with
             _lcm.tx_processing as _tx_result_metas_raw
 
         from galexie
-    ),  
+    ),
 
     tx_envelopes as (
         select
@@ -87,25 +87,25 @@ with
             stellar_hash_transaction(_tx_envelope_raw,  'Public Global Stellar Network ; September 2015') as transaction_hash,
 
             if(
-                startsWith(_tx_envelope_inner.source_account, 'M'), 
-                stellar_unmux(_tx_envelope_inner.source_account), 
+                startsWith(_tx_envelope_inner.source_account, 'M'),
+                stellar_unmux(_tx_envelope_inner.source_account),
                 _tx_envelope_inner.source_account
             ) as transaction_source_account,
 
             if(
-                startsWith(_tx_envelope_inner.source_account, 'M'), 
+                startsWith(_tx_envelope_inner.source_account, 'M'),
                 _tx_envelope_inner.source_account,
                 ''
             ) as transaction_source_account_muxed,
 
             _tx_envelope_inner.operations as _ops_raw
-        from ledgers 
-        array join 
+        from ledgers
+        array join
             _tx_envelopes_raw as _tx_envelope_raw
     ),
 
     tx_result_metas as (
-        select             
+        select
             JSONExtract(_tx_result_meta_raw, 'Tuple(
                 result Tuple(
                     transaction_hash String,
@@ -126,20 +126,20 @@ with
             _tx_order,
 
             if(
-                JSONType(_tx_result_meta.result.result.result) = 'Object', 
-                _result.1, 
+                JSONType(_tx_result_meta.result.result.result) = 'Object',
+                _result.1,
                 _tx_result_meta.result.result.result
             ) as transaction_result_code,
 
             (transaction_result_code in ('tx_fee_bump_inner_success', 'tx_success')) as transaction_successful
-        from ledgers 
-        array join 
+        from ledgers
+        array join
             _tx_result_metas_raw as _tx_result_meta_raw,
             arrayEnumerate(_tx_result_metas_raw) as _tx_order
     ),
 
     txs as (
-        select 
+        select
             columns('^[^_]'),
             stellar_id(ledger_sequence::Int32, _tx_order::Int32, 0::Int32) as transaction_id,
             _ops_raw,
@@ -151,7 +151,7 @@ with
     ),
 
     ops as (
-        select 
+        select
             columns('^[^_]'),
 
             JSONExtractString(_op_raw, 'source_account') as _source_account,
@@ -166,20 +166,20 @@ with
             _body_inner.2 as body,
 
             if(
-                startsWith(_source_account, 'M'), 
-                stellar_unmux(_source_account), 
+                startsWith(_source_account, 'M'),
+                stellar_unmux(_source_account),
                 _source_account
             ) as source_account,
 
             if(
-                startsWith(_source_account, 'M'), 
+                startsWith(_source_account, 'M'),
                 _source_account,
                 ''
             ) as source_account_muxed,
 
             if(
-                JSONType(_op_result_raw) = 'Object', 
-                _op_result.1, 
+                JSONType(_op_result_raw) = 'Object',
+                _op_result.1,
                 JSONExtractString(_op_result_raw)
             ) as result_code,
 
@@ -191,21 +191,21 @@ with
 
             _op_result_tr_inner.2 as result_body
         from txs
-        array join 
+        array join
             _ops_raw as _op_raw,
             _ops_results_raw as _op_result_raw,
             arrayEnumerate(_ops_raw) as _op_order
     )
 
 select
-    ledger_sequence,        
-    ledger_close_time,         
-    ledger_hash,    
-    transaction_hash,           
+    ledger_sequence,
+    ledger_close_time,
+    ledger_hash,
+    transaction_hash,
     transaction_id,
     transaction_result_code,
     transaction_successful,
-    id,    
+    id,
 
     firstNonDefault(
         source_account,
@@ -217,14 +217,14 @@ select
         transaction_source_account_muxed
     ) as source_account_muxed,
 
-    type,                     
-    body,                    
-    result_code,              
-    inner_result_code,       
+    type,
+    body,
+    result_code,
+    inner_result_code,
     result_body
 from ops
 
 format Vertical
 
-settings 
+settings
     output_format_arrow_string_as_string=0

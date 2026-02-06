@@ -1,6 +1,6 @@
-with 
+with
     trustlines as (
-        select 
+        select
             JSONExtract(ledger_entry_data, 'Tuple(
                 account_id String,
                 asset String,
@@ -58,13 +58,13 @@ with
         where ledger_entry_type = 'trustline'
     )
 
-select 
+select
     columns('^[^_]')
 from trustlines
 limit 10
 
 format Vertical
-settings 
+settings
     output_format_arrow_string_as_string=0,
     enable_unaligned_array_join = 1,
     enable_named_columns_in_function_tuple=1

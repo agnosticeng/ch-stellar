@@ -5,12 +5,14 @@ pub type Result<T> = std::result::Result<T, StellarError>;
 
 #[derive(Error, Debug)]
 pub enum StellarError {
-    #[error("objectstore error")]
+    #[error(transparent)]
     ObjectStore(#[from] object_store::Error),
-    #[error("i/o error")]
+    #[error(transparent)]
     IO(#[from] std::io::Error),
-    #[error("URL parsing error")]
+    #[error(transparent)]
     URLParse(#[from] url::ParseError),
+    #[error(transparent)]
+    JSON(#[from] serde_json::Error),
     #[error("XDR error")]
     XDRError(#[from] stellar_xdr::curr::Error),
     #[error("wrong XDR type")]
@@ -23,4 +25,6 @@ pub enum StellarError {
     WrongGalexieFilename(String),
     #[error("unmatched tx envelope")]
     UnmatchedTxEnvelope,
+    #[error("invalid compression")]
+    InvalidCompression,
 }

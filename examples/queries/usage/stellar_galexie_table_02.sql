@@ -1,18 +1,18 @@
 select
-    ledger_close_meta.v0.ledger_header.header.ledger_seq as sequence,
-    ledger_close_meta.v0.ledger_header.header.scp_value.close_time as close_time
+    ledger.v0.ledger_header.header.ledger_seq as sequence,
+    ledger.v0.ledger_header.header.scp_value.close_time as close_time
 from executable(
     'ch-stellar table-function galexie',
     ArrowStream,
-    'ledger_close_meta JSON',
+    'ledger JSON',
     (
         select * from values(
             'url String, start UInt32, end UInt32',
-            ('https://galexie.lightsail.network/v1/#ledgers_per_file=8&files_per_partition=64000&extension=xdr.zst', 50000000, 50000099)
+            ('https://galexie.lightsail.network/v1/', 50000000, 50000099)
         )
     ),
-    settings 
-        stderr_reaction='log', 
+    settings
+        stderr_reaction='log',
         check_exit_code=true,
         command_read_timeout=60000
 )

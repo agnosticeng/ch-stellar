@@ -6,9 +6,9 @@ with
     ledgers as (
         select
             firstNonDefault(
-                JSONExtractString(ledger_close_meta, 'v0'),
-                JSONExtractString(ledger_close_meta, 'v1'),
-                JSONExtractString(ledger_close_meta, 'v2')
+                JSONExtractString(ledger, 'v0'),
+                JSONExtractString(ledger, 'v1'),
+                JSONExtractString(ledger, 'v2')
             ) as _lcm_raw,
 
             JSONExtract(_lcm_raw, ' Tuple(
