@@ -4,6 +4,7 @@ mod stellar_hash_transaction;
 mod stellar_id;
 mod stellar_rpc;
 mod stellar_strkey_decode;
+mod stellar_uint256_to_account;
 mod stellar_unmux;
 mod stellar_xdr_decode;
 
@@ -15,6 +16,7 @@ use stellar_hash_transaction::StellarHashTransactionCommand;
 use stellar_id::StellarIdCommand;
 use stellar_rpc::StellarRpcCommand;
 use stellar_strkey_decode::StellarStrkeyDecodeCommand;
+use stellar_uint256_to_account::StellarUint256ToAccountCommand;
 use stellar_unmux::StellarUnmuxCommand;
 use stellar_xdr_decode::StellarXdrDecodeCommand;
 
@@ -28,6 +30,7 @@ pub enum FunctionCommand {
     Unmux(StellarUnmuxCommand),
     AssetId(StellarAssetIdCommand),
     GalexieTip(StellarGalexieTipCommand),
+    Uint256ToAccount(StellarUint256ToAccountCommand),
 }
 
 #[derive(Clone, Debug, Args)]
@@ -47,6 +50,7 @@ impl Function {
             FunctionCommand::Unmux(cmd) => cmd.run().await,
             FunctionCommand::AssetId(cmd) => cmd.run().await,
             FunctionCommand::GalexieTip(cmd) => cmd.run().await,
+            FunctionCommand::Uint256ToAccount(cmd) => cmd.run().await,
         }
     }
 }

@@ -1,0 +1,63 @@
+use anyhow::{Context, Result};
+use arrow::array::{BinaryArray, GenericByteBuilder, RecordBatch};
+use arrow::datatypes::{BinaryType, DataType, Field, Schema};
+use arrow_ipc::reader::StreamReader;
+use arrow_ipc::writer::StreamWriter;
+use ch_udf_common::arrow::RecordBatchExt;
+use clap::Args;
+use core::str;
+use std::io::{stdin, stdout};
+use std::str::FromStr;
+use std::sync::Arc;
+use stellar_xdr::curr::{MuxedAccount, Uint256};
+
+#[derive(Debug, Clone, Args)]
+pub struct StellarUint256ToAccountCommand {}
+
+impl StellarUint256ToAccountCommand {
+    pub async fn run(&self) -> Result<()> {
+        let output_schema = Arc::new(Schema::new(vec![Field::new(
+            "result",
+            DataType::Binary,
+            false,
+        )]));
+
+        loop {
+            let reader = StreamReader::try_new(stdin(), None)?;
+            let mut writer = StreamWriter::try_new_buffered(stdout(), &output_schema)?;
+
+            for input_batch in reader {
+                let input_batch = input_batch.context("failed to read input batch")?;
+                let mut result_col_builder = GenericByteBuilder::<BinaryType>::with_capacity(
+                    input_batch.num_rows(),
+                    input_batch.num_rows() * 1024,
+                );
+                let uint256_col: &BinaryArray = input_batch.get_column("uint256")?;
+
+                let it = uint256_col.iter().map(|s| -> Result<String> {
+                    let s = str::from_utf8(s.unwrap())?;
+
+                    if s.is_empty() {
+                        return Ok("".to_string());
+                    }
+
+                    let i = Uint256::from_str(s)?;
+                    let account = MuxedAccount::Ed25519(i);
+                    Ok(account.to_string())
+                });
+
+                for v in it {
+                    result_col_builder.append_value(v?);
+                }
+
+                let result_col = result_col_builder.finish();
+                let output_batch =
+                    RecordBatch::try_new(output_schema.clone(), vec![Arc::new(result_col)])?;
+                writer
+                    .write(&output_batch)
+                    .context("failed to write output batch")?;
+                writer.flush().context("failed to flush output stream")?;
+            }
+        }
+    }
+}
