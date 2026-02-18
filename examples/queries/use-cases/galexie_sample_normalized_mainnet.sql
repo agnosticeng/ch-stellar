@@ -12,6 +12,36 @@ from executable(
             'url String, start UInt32, end UInt32',
             (
                 'https://galexie.lightsail.network/v1/',
+                3,
+                10
+            ),
+            (
+            '   https://galexie.lightsail.network/v1/',
+                250000,
+                250020
+            ),
+            (
+                'https://galexie.lightsail.network/v1/',
+                557450,
+                557460
+            ),
+            (
+                'https://galexie.lightsail.network/v1/',
+                4000000,
+                4000005
+            ),
+            (
+                'https://galexie.lightsail.network/v1/',
+                12000000,
+                12000024
+            ),
+            (
+                'https://galexie.lightsail.network/v1/',
+                23000000,
+                23000016
+            ),
+            (
+                'https://galexie.lightsail.network/v1/',
                 33028304,
                 33028314
             ),
@@ -21,7 +51,12 @@ from executable(
                 34000010
             ),
             (
-            'https://galexie.lightsail.network/v1/',
+                'https://galexie.lightsail.network/v1/',
+                41447181,
+                41447183
+            ),
+            (
+                'https://galexie.lightsail.network/v1/',
                 54000000,
                 54000010
             ),

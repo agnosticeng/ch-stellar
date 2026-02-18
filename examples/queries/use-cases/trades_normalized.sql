@@ -45,32 +45,31 @@ with
             _ledger.tx_set as _tx_envelopes_raw,
             _ledger.tx_processing as _tx_result_metas_raw
         from galexie
-    )
+    ),
 
     txs as (
         select
             columns('^[^_]'),
 
-
             JSONExtract(_tx_envelope_raw, 'Tuple(
-                tx Tuple(
-                    tx String
-                ),
+                tx_v0 Tuple(tx String),
+                tx Tuple(tx String),
                 tx_fee_bump Tuple(
                     tx Tuple(
                         inner_tx Tuple(
-                            tx Tuple(
-                                tx String
-                            )
+                            tx Tuple(tx String)
                         )
                     )
                 )
             )') as _tx_envelope,
 
+            _tx_envelope_raw,
+
             JSONExtract(
                 firstNonDefault(
-                    _tx_envelope.tx_fee_bump.tx.inner_tx.tx.tx,
-                    _tx_envelope.tx.tx
+                    _tx_envelope.tx_v0.tx,
+                    _tx_envelope.tx.tx,
+                    _tx_envelope.tx_fee_bump.tx.inner_tx.tx.tx
                 ),
                 'Tuple(
                     operations Array(String)

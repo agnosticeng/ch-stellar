@@ -1,73 +1,63 @@
 with
     galexie as (
-        select * from file('./tmp/galexie_sample_mainnet.bin', 'Native')
+        select * from file('./tmp/galexie_sample_normalized_mainnet.bin', 'Native')
     ),
 
     ledgers as (
         select
-            firstNonDefault(
-                JSONExtractString(ledger, 'v0'),
-                JSONExtractString(ledger, 'v1'),
-                JSONExtractString(ledger, 'v2')
-            ) as _lcm_raw,
-
-            JSONExtract(_lcm_raw, ' Tuple(
+            JSONExtract(ledger, 'Tuple(
                 ledger_header Tuple(
                     hash String,
                     header Tuple(
                         ledger_seq Int32,
+                        previous_ledger_hash String,
+                        total_coins UInt64,
+                        fee_pool UInt64,
+                        base_fee UInt64,
+                        base_reserve UInt64,
+                        max_tx_set_size UInt32,
+                        ledger_version UInt32,
                         scp_value Tuple(
-                            close_time DateTime64(6, \'UTC\')
+                            close_time DateTime64(6, \'UTC\'),
+                            ext Tuple(
+                                signed Tuple(
+                                    node_id String,
+                                    signature String
+                                )
+                            )
                         )
                     )
                 ),
-                tx_set Tuple(
-                    txs Array(String),
+                tx_set Array(String),
+                tx_processing Array(String),
+                total_byte_size_of_live_soroban_state UInt64,
+                ext Tuple(
                     v1 Tuple(
-                        phases Array(Tuple(
-                            v0 Array(Tuple(
-                                txset_comp_txs_maybe_discounted_fee Tuple(
-                                    txs Array(String)
-                                )
-                            )),
-                            v1 Tuple(
-                                execution_stages Array(Array(Array(String)))
-                            )
-                        ))
+                        soroban_fee_write1_kb UInt64
                     )
-                ),
-                tx_processing Array(String)
-            )') as _lcm,
+                )
+            )') as _ledger,
 
-            _lcm.ledger_header.header.ledger_seq as ledger_sequence,
-            _lcm.ledger_header.header.scp_value.close_time as ledger_close_time,
-            _lcm.ledger_header.hash as ledger_hash,
+            _ledger.ledger_header.header.ledger_seq as ledger_sequence,
+            _ledger.ledger_header.header.scp_value.close_time as ledger_close_time,
+            _ledger.ledger_header.hash as ledger_hash,
 
-            arrayConcat(
-                _lcm.tx_set.txs,
-                arrayFlatten(_lcm.tx_set.v1.phases.v0.txset_comp_txs_maybe_discounted_fee.txs),
-                arrayFlatten(_lcm.tx_set.v1.phases.v1.execution_stages)
-            ) as _tx_envelopes_raw,
-
-            _lcm.tx_processing as _tx_result_metas_raw
-
+            _ledger.tx_set as _tx_envelopes_raw,
+            _ledger.tx_processing as _tx_result_metas_raw
         from galexie
     ),
 
-    tx_envelopes as (
+    txs as (
         select
             columns('^[^_]'),
 
             JSONExtract(_tx_envelope_raw, 'Tuple(
-                tx Tuple(
-                    tx String
-                ),
+                tx_v0 Tuple(tx String),
+                tx Tuple(tx String),
                 tx_fee_bump Tuple(
                     tx Tuple(
                         inner_tx Tuple(
-                            tx Tuple(
-                                tx String
-                            )
+                            tx Tuple(tx String)
                         )
                     )
                 )
@@ -75,37 +65,37 @@ with
 
             JSONExtract(
                 firstNonDefault(
-                    _tx_envelope.tx_fee_bump.tx.inner_tx.tx.tx,
-                    _tx_envelope.tx.tx
+                    _tx_envelope.tx_v0.tx,
+                    _tx_envelope.tx.tx,
+                    _tx_envelope.tx_fee_bump.tx.inner_tx.tx.tx
                 ),
                 'Tuple(
+                    source_account_ed25519 String,
                     source_account String,
                     operations Array(String)
                 )'
             ) _tx_envelope_inner,
 
-            stellar_hash_transaction(_tx_envelope_raw,  'Public Global Stellar Network ; September 2015') as transaction_hash,
+            multiIf(
+                length(_tx_envelope_inner.source_account) > 0, _tx_envelope_inner.source_account,
+                length(_tx_envelope_inner.source_account_ed25519) > 0, stellar_uint256_to_account(_tx_envelope_inner.source_account_ed25519),
+                ''
+            ) as _transaction_source_account,
 
             if(
-                startsWith(_tx_envelope_inner.source_account, 'M'),
-                stellar_unmux(_tx_envelope_inner.source_account),
-                _tx_envelope_inner.source_account
+                startsWith(_transaction_source_account, 'M'),
+                stellar_unmux(_transaction_source_account),
+                _transaction_source_account
             ) as transaction_source_account,
 
             if(
-                startsWith(_tx_envelope_inner.source_account, 'M'),
-                _tx_envelope_inner.source_account,
+                startsWith(_transaction_source_account, 'M'),
+                _transaction_source_account,
                 ''
             ) as transaction_source_account_muxed,
 
-            _tx_envelope_inner.operations as _ops_raw
-        from ledgers
-        array join
-            _tx_envelopes_raw as _tx_envelope_raw
-    ),
+            _tx_envelope_inner.operations as _ops_raw,
 
-    tx_result_metas as (
-        select
             JSONExtract(_tx_result_meta_raw, 'Tuple(
                 result Tuple(
                     transaction_hash String,
@@ -124,6 +114,7 @@ with
             ) as _ops_results_raw,
 
             _tx_order,
+            _tx_result_meta.result.transaction_hash as transaction_hash,
 
             if(
                 JSONType(_tx_result_meta.result.result.result) = 'Object',
@@ -131,23 +122,17 @@ with
                 _tx_result_meta.result.result.result
             ) as transaction_result_code,
 
-            (transaction_result_code in ('tx_fee_bump_inner_success', 'tx_success')) as transaction_successful
-        from ledgers
-        array join
-            _tx_result_metas_raw as _tx_result_meta_raw,
-            arrayEnumerate(_tx_result_metas_raw) as _tx_order
-    ),
+            (transaction_result_code in ('tx_fee_bump_inner_success', 'tx_success')) as transaction_successful,
 
-    txs as (
-        select
-            columns('^[^_]'),
             stellar_id(ledger_sequence::Int32, _tx_order::Int32, 0::Int32) as transaction_id,
             _ops_raw,
             _ops_results_raw,
             _tx_order
-        from tx_envelopes
-        left join tx_result_metas
-        on tx_envelopes.transaction_hash = tx_result_metas._tx_result_meta.result.transaction_hash
+        from ledgers
+        array join
+            _tx_envelopes_raw as _tx_envelope_raw,
+            _tx_result_metas_raw as _tx_result_meta_raw,
+            arrayEnumerate(_tx_result_metas_raw) as _tx_order
     ),
 
     ops as (
@@ -162,6 +147,7 @@ with
             JSONExtractKeysAndValues(_op_result_tr.2, 'String')[1] as _op_result_tr_inner,
 
             stellar_id(ledger_sequence::Int32, _tx_order::Int32, _op_order::Int32) as id,
+
             _body_inner.1 as type,
             _body_inner.2 as body,
 
@@ -212,9 +198,10 @@ select
         transaction_source_account
     ) as source_account,
 
-    firstNonDefault(
-        source_account_muxed,
-        transaction_source_account_muxed
+    multiIf(
+        source_account <> '', source_account_muxed,
+        transaction_source_account <> '', transaction_source_account_muxed,
+        ''
     ) as source_account_muxed,
 
     type,
@@ -225,6 +212,5 @@ select
 from ops
 
 format Vertical
-
 settings
     output_format_arrow_string_as_string=0
